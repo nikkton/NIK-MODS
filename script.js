@@ -1,4 +1,4 @@
-const CONFIG={OWNER:"nikkton",REPO:"NIK-MODS",MAX_RELEASES:50,TIMEOUT_MS:10000,CACHE_SECONDS:30};
+const CONFIG={OWNER:"nikkton",REPO:"NIK-MODS",MAX_RELEASES:30,TIMEOUT_MS:8000,CACHE_SECONDS:0};
 const $=s=>document.querySelector(s),grid=$("#grid"),status=$("#status"),count=$("#count"),hero=$("#heroSearch"),top=$("#topSearch");let assets=[],filter="all";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const size=b=>{if(!b)return"—";let u=["B","KB","MB","GB"],i=0,n=b;while(n>=1024&&i<3){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`};
