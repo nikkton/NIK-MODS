@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050505">
-<title>NIK MODS — Android Apps, Games & Tools</title>
+<meta name="description" content="NIK MODS — a clean home for apps, games and tools.">
+<title>NIK MODS — Apps • Games • Tools</title>
 <link rel="icon" href="assets/nik-logo.svg">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,39 +13,40 @@
 <div class="noise"></div><div class="blood-bg"></div>
 <header class="topbar">
   <a class="brand" href="./"><img src="assets/nik-logo.svg" alt="NIK"><span>NIK MODS</span></a>
-  <nav>
-    <a class="active" href="./">⌂ <span>Home</span></a><a href="#apps">▦ <span>Apps</span></a><a href="#games">🎮 <span>Games</span></a><a href="#tools">⚒ <span>Tools</span></a><a href="#updates">♨ <span>Updates</span></a>
+  <nav aria-label="Main navigation">
+    <a class="active" href="#home">Home</a><a href="#catalog">Apps</a><a href="#catalog">Games</a><a href="#catalog">Tools</a><a href="#updates">Updates</a>
   </nav>
-  <div class="top-search">⌕<input id="topSearch" placeholder="Search..." autocomplete="off"></div>
+  <label class="top-search">⌕<input id="topSearch" placeholder="Search..." autocomplete="off" aria-label="Search"></label>
   <button class="menu" aria-label="Menu">☰</button>
 </header>
 
-<main>
+<main id="home">
 <section class="hero">
-  <div class="hero-scene" aria-hidden="true">
-    <div class="scene-ring"></div><div class="scene-grid"></div>
-    <img src="assets/nik-logo.svg" alt="">
-    <div class="scene-glow"></div>
-  </div>
+  <div class="hero-scene" aria-hidden="true"><div class="scene-ring"></div><div class="scene-grid"></div><img src="assets/nik-logo.svg" alt=""><div class="scene-glow"></div></div>
   <div class="hero-content">
     <p class="eyebrow">ANDROID • APPS • GAMES • TOOLS</p>
     <h1>Everything you need.<br><span>Nothing extra.</span></h1>
-    <p class="hero-copy">A dark, fast and clean home for useful Android releases.</p>
-    <div class="hero-search">⌕<input id="heroSearch" placeholder="Search apps, games, tools..." autocomplete="off"></div>
+    <p class="hero-copy">Find it. Choose it. Get it. A clean download catalog by NIK.</p>
+    <label class="hero-search">⌕<input id="heroSearch" placeholder="Search apps, games, tools..." autocomplete="off" aria-label="Search catalog"></label>
     <div class="filters" id="filters">
-      <button class="active" data-filter="all">✦ All</button><button data-filter="apps">▦ Apps</button><button data-filter="games">🎮 Games</button><button data-filter="tools">⚒ Tools</button><button data-filter="updates">♨ Updates</button>
+      <button class="active" data-filter="all">✦ All</button><button data-filter="apps">▦ Apps</button><button data-filter="games">🎮 Games</button><button data-filter="tools">⚒ Tools</button>
     </div>
   </div>
 </section>
 
-<section class="catalog" id="apps">
-  <div class="section-head"><div><p class="eyebrow">LATEST RELEASES</p><h2>Fresh drops</h2></div><span id="count">—</span></div>
-  <div id="status" class="status"><span class="loader"></span><span>Loading releases...</span></div>
+<section class="catalog" id="catalog">
+  <div class="section-head"><div><p class="eyebrow">THE CATALOG</p><h2>Choose your drop.</h2></div><span id="count">—</span></div>
+  <div id="sourceNote" class="source-note">Latest uploads • Updated automatically</div>
   <div id="grid" class="grid"></div>
+</section>
+
+<section class="updates" id="updates">
+  <div><p class="eyebrow">NIK MODS</p><h2>Simple by design.</h2><p>One place to discover apps, games and tools without a crowded interface.</p></div>
+  <div class="update-pill">NEW DROPS <b>DAILY</b></div>
 </section>
 </main>
 
 <footer><span>© <span id="year"></span> NIK MODS</span><span>Only distribute files you have the right to distribute.</span></footer>
-<script src="script.js?v=5" defer></script>
+<script src="script.js?v=6" defer></script>
 </body>
 </html>
