@@ -20,7 +20,7 @@ function parseCSV(text){
 }
 function normalize(r){
  const c=norm(r.category||r.type)||category(r.name);
- return {name:r.name,category:c==="game"?"games":c==="tool"?"tools":c==="app"?"apps":c,version:r.version||"Latest",size:r.size||"—",description:r.description||"Ready to download",icon:r.icon||CONFIG.DEFAULT_ICON,link:r.link||r.url||"#",date:r.date||r.updated||""};
+ return {name:r.name,category:c==="game"?"games":c==="tool"?"tools":c==="app"?"apps":c,version:r.version||"Latest",size:r.size||"—",description:r.description||"Available release",icon:r.icon||CONFIG.DEFAULT_ICON,link:r.link||r.url||"#",date:r.date||r.updated||""};
 }
 function render(){
  const q=norm(hero.value||top.value);
@@ -31,14 +31,14 @@ function render(){
   <div class="card-content">
    <div class="app-top"><img class="icon" src="${esc(a.icon)}" alt="" loading="lazy"><div class="app-info"><div class="app-name">${esc(a.name)}</div><div class="meta">${esc(a.version)} <i>•</i> ${esc(size(a.size))}</div></div><span class="category-tag">${esc(a.category)}</span></div>
    <div class="description">${esc(a.description)}</div>
-   <a class="download ${a.link==="#"?"disabled":""}" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${a.link==="#"?"Coming soon":"↓  Get download"}</a>
+   <a class="download ${a.link==="#"?"disabled":""}" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${a.link==="#"?"Not available":"↓  Continue to download"}</a>
    <div class="bottom-meta"><span>${a.date?"◷ "+esc(date(a.date)):"NIK MODS"}</span><span>● READY</span></div>
   </div>
  </article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>';
 }
 async function load(){
- if(!CONFIG.CSV_URL){items=fallback.map(normalize);document.querySelector("#sourceNote").textContent="Demo catalog • Connect Google Sheets to manage drops";render();return}
- try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");items=parseCSV(await res.text()).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated from Google Sheets";render()}
+ if(!CONFIG.CSV_URL){items=fallback.map(normalize);document.querySelector("#sourceNote").textContent="Preview catalog • Live listings will appear here";render();return}
+ try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");items=parseCSV(await res.text()).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated automatically";render()}
  catch(e){items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}
 }
 function sync(a,b){a.addEventListener("input",()=>{b.value=a.value;render()})}
