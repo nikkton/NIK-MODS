@@ -1,45 +1,45 @@
-const CONFIG={OWNER:"nikkton",REPO:"NIK-MODS",MAX_RELEASES:30,TIMEOUT_MS:8000,CACHE_SECONDS:0};
-const $=s=>document.querySelector(s),grid=$("#grid"),status=$("#status"),count=$("#count"),hero=$("#heroSearch"),top=$("#topSearch");let assets=[],filter="all";
+const CONFIG={CSV_URL:"",DEFAULT_ICON:"assets/nik-logo.svg"};
+const $=s=>document.querySelector(s),grid=$("#grid"),count=$("#count"),hero=$("#heroSearch"),top=$("#topSearch");
+let items=[],filter="all";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-const size=b=>{if(!b)return"—";let u=["B","KB","MB","GB"],i=0,n=b;while(n>=1024&&i<3){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`};
-const date=d=>{try{return new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",year:"numeric"}).format(new Date(d))}catch{return""}};
-const cat=n=>/game|pubg|bgmi|minecraft|roblox|gta|freefire|brawl/i.test(n)?"games":/tool|manager|zarchiver|termux|vpn|root|utility/i.test(n)?"tools":"apps";
-const clean=n=>String(n||"").replace(/\.(apk|xapk|apks|zip|rar|7z)$/i,"").replace(/[_-]+/g," ").replace(/\b(v?\d[\w.-]*)\b/ig,"").trim();
-function setStatus(html,loading=false){status.innerHTML=loading?'<span class="loader"></span><span>Loading releases...</span>':html;status.style.display="flex"}
+const clean=s=>String(s||"").trim();
+const norm=s=>clean(s).toLowerCase();
+const size=s=>clean(s)||"—";
+const date=s=>{if(!s)return"—";try{return new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",year:"numeric"}).format(new Date(s))}catch{return s}};
+const category=s=>{let n=norm(s);return /game|pubg|bgmi|minecraft|roblox|gta|freefire|brawl|gameplay/.test(n)?"games":/tool|manager|zarchiver|termux|vpn|root|utility|editor/.test(n)?"tools":"apps"};
+const fallback=[
+{name:"Spotify",category:"apps",version:"Latest",size:"—",description:"Music and audio release",icon:"assets/nik-logo.svg",link:"#"},
+{name:"Minecraft",category:"games",version:"Latest",size:"—",description:"Game release",icon:"assets/nik-logo.svg",link:"#"},
+{name:"ZArchiver",category:"tools",version:"Latest",size:"—",description:"File management tool",icon:"assets/nik-logo.svg",link:"#"}
+];
+function parseCSV(text){
+ const rows=[];let row=[],cell="",quote=false;
+ for(let i=0;i<text.length;i++){let c=text[i],n=text[i+1];if(c==='"'&&quote&&n==='"'){cell+='"';i++;continue}if(c==='"'){quote=!quote;continue}if(c===','&&!quote){row.push(cell);cell="";continue}if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(Boolean))rows.push(row);row=[];cell="";continue}cell+=c}row.push(cell);if(row.some(Boolean))rows.push(row);
+ const h=(rows.shift()||[]).map(x=>norm(x).replace(/\s+/g,"_"));
+ return rows.map(r=>Object.fromEntries(h.map((k,i)=>[k,clean(r[i])]))).filter(x=>x.name);
+}
+function normalize(r){
+ const c=norm(r.category||r.type)||category(r.name);
+ return {name:r.name,category:c==="game"?"games":c==="tool"?"tools":c==="app"?"apps":c,version:r.version||"Latest",size:r.size||"—",description:r.description||"Ready to download",icon:r.icon||CONFIG.DEFAULT_ICON,link:r.link||r.url||"#",date:r.date||r.updated||""};
+}
 function render(){
- let q=(hero.value||top.value).trim().toLowerCase();
- let v=assets.filter(a=>(filter==="all"||a.category===filter)&&(!q||`${a.name} ${a.release} ${a.category}`.toLowerCase().includes(q)));
- count.textContent=`${v.length} item${v.length===1?"":"s"}`;
- status.style.display="none";
- grid.innerHTML=v.length?v.map(a=>`<article class="card"><div class="card-bg"><img src="assets/nik-logo.svg" loading="lazy" alt=""></div><div class="card-content"><div class="app-top"><img class="icon" src="assets/nik-logo.svg" alt=""><div><div class="app-name">${esc(clean(a.name)||a.name)}</div><div class="meta">${esc(a.tag||"Latest")} • ${size(a.size)}</div></div><button class="more" aria-label="More">⋮</button></div><div class="description">${esc(a.release||a.category)}</div><a class="download" href="${esc(a.url)}" target="_blank" rel="noopener">↓ &nbsp;Download</a><div class="bottom-meta"><span>◷ ${date(a.published)}</span><span>GitHub Release</span></div></div></article>`).join(""):'<div class="empty">No matching files yet.</div>';
+ const q=norm(hero.value||top.value);
+ const visible=items.filter(x=>(filter==="all"||x.category===filter)&&(!q||norm(x.name+" "+x.description+" "+x.category).includes(q)));
+ count.textContent=visible.length+" "+(visible.length===1?"item":"items");
+ grid.innerHTML=visible.length?visible.map((a,i)=>`<article class="card" style="--delay:${i*45}ms">
+  <div class="card-bg"><img src="${esc(a.icon)}" alt="" loading="lazy"></div>
+  <div class="card-content">
+   <div class="app-top"><img class="icon" src="${esc(a.icon)}" alt="" loading="lazy"><div class="app-info"><div class="app-name">${esc(a.name)}</div><div class="meta">${esc(a.version)} <i>•</i> ${esc(size(a.size))}</div></div><span class="category-tag">${esc(a.category)}</span></div>
+   <div class="description">${esc(a.description)}</div>
+   <a class="download ${a.link==="#"?"disabled":""}" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${a.link==="#"?"Coming soon":"↓  Get download"}</a>
+   <div class="bottom-meta"><span>${a.date?"◷ "+esc(date(a.date)):"NIK MODS"}</span><span>● READY</span></div>
+  </div>
+ </article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>';
 }
 async function load(){
- setStatus("",true);
- try{
-  const key=`nik:${CONFIG.OWNER}/${CONFIG.REPO}`;let cached=null;
-  try{cached=JSON.parse(sessionStorage.getItem(key)||"null")}catch{}
-  let r=cached&&Date.now()-cached.time<CONFIG.CACHE_SECONDS*1000?cached.data:null;
-  if(!r){
-   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),CONFIG.TIMEOUT_MS);
-   let res;try{res=await fetch(`https://api.github.com/repos/${encodeURIComponent(CONFIG.OWNER)}/${encodeURIComponent(CONFIG.REPO)}/releases?per_page=${CONFIG.MAX_RELEASES}`,{headers:{Accept:"application/vnd.github+json"},cache:"no-store",signal:controller.signal})}finally{clearTimeout(timer)}
-   if(!res.ok)throw Error(`GitHub API ${res.status}`);
-   r=await res.json();if(!Array.isArray(r))throw Error("Unexpected GitHub response");
-   try{sessionStorage.setItem(key,JSON.stringify({time:Date.now(),data:r}))}catch{}
-  }
-  assets=[];
-  r.filter(x=>!x.draft&&Array.isArray(x.assets)).forEach(x=>x.assets.filter(a=>a&&a.browser_download_url&&!/^(Source code|source code)/i.test(a.name)&&!/\.(sha256|sha512|md5|sig|asc)$/i.test(a.name)).forEach(a=>assets.push({name:a.name,size:a.size,url:a.browser_download_url,tag:x.tag_name,release:x.name||x.tag_name,published:x.published_at||x.created_at,category:cat(a.name+" "+(x.name||""))})));
-  if(!assets.length){
-   count.textContent="0 items";
-   setStatus('<span>No downloadable files yet. Upload your APK/ZIP under <b>GitHub → Releases → Assets</b>.</span>');
-   return;
-  }
-  render();
- }catch(e){
-  console.error("NIK MODS:",e);
-  count.textContent="Error";
-  const msg=e?.name==="AbortError"?"GitHub took too long to respond.":"Could not load GitHub releases.";
-  setStatus(`<span>${msg} <a href="https://github.com/nikkton/NIK-MODS/releases" target="_blank" rel="noopener">Open Releases →</a></span>`);
- }
+ if(!CONFIG.CSV_URL){items=fallback.map(normalize);document.querySelector("#sourceNote").textContent="Demo catalog • Connect Google Sheets to manage drops";render();return}
+ try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");items=parseCSV(await res.text()).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated from Google Sheets";render()}
+ catch(e){items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}
 }
 function sync(a,b){a.addEventListener("input",()=>{b.value=a.value;render()})}
 sync(hero,top);sync(top,hero);
