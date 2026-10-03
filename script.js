@@ -1,4 +1,4 @@
-const CONFIG={CSV_URL:"",DEFAULT_ICON:"assets/nik-logo.svg"};
+const CONFIG={CSV_URL:"https://docs.google.com/spreadsheets/d/1wDXCt_fx0EdkjHbaHwDvnoZA__5_OAWYT5sPZ1mhRiU/gviz/tq?tqx=out:csv",DEFAULT_ICON:"assets/nik-logo.svg"};
 const $=s=>document.querySelector(s),grid=$("#grid"),count=$("#count"),hero=$("#heroSearch"),top=$("#topSearch");
 let items=[],filter="all";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
@@ -37,7 +37,6 @@ function render(){
  </article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>';
 }
 async function load(){
- if(!CONFIG.CSV_URL){items=fallback.map(normalize);document.querySelector("#sourceNote").textContent="Preview catalog • Live listings will appear here";render();return}
  try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");items=parseCSV(await res.text()).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated automatically";render()}
  catch(e){items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}
 }
