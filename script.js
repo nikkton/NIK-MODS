@@ -1,45 +1,17 @@
-const CONFIG={CSV_URL:"https://docs.google.com/spreadsheets/d/1wDXCt_fx0EdkjHbaHwDvnoZA__5_OAWYT5sPZ1mhRiU/gviz/tq?tqx=out:csv",DEFAULT_ICON:"assets/nik-logo.svg"};
+const CONFIG={CATALOG_URL:"catalog.json",DEFAULT_ICON:"assets/nik-logo.svg"};
 const $=s=>document.querySelector(s),grid=$("#grid"),count=$("#count"),hero=$("#heroSearch"),top=$("#topSearch");
 let items=[],filter="all";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-const clean=s=>String(s||"").trim();
+const clean=s=>String(s??"").trim();
 const norm=s=>clean(s).toLowerCase();
 const size=s=>clean(s)||"—";
-const date=s=>{if(!s)return"—";try{return new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",year:"numeric"}).format(new Date(s))}catch{return s}};
-const category=s=>{let n=norm(s);return /game|pubg|bgmi|minecraft|roblox|gta|freefire|brawl|gameplay/.test(n)?"games":/tool|manager|zarchiver|termux|vpn|root|utility|editor/.test(n)?"tools":"apps"};
-const fallback=[
-{name:"Spotify",category:"apps",version:"Latest",size:"—",description:"Music and audio release",icon:"assets/nik-logo.svg",link:"#"},
-{name:"Minecraft",category:"games",version:"Latest",size:"—",description:"Game release",icon:"assets/nik-logo.svg",link:"#"},
-{name:"ZArchiver",category:"tools",version:"Latest",size:"—",description:"File management tool",icon:"assets/nik-logo.svg",link:"#"}
-];
-function parseCSV(text){
- const rows=[];let row=[],cell="",quote=false;
- for(let i=0;i<text.length;i++){let c=text[i],n=text[i+1];if(c==='"'&&quote&&n==='"'){cell+='"';i++;continue}if(c==='"'){quote=!quote;continue}if(c===','&&!quote){row.push(cell);cell="";continue}if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(Boolean))rows.push(row);row=[];cell="";continue}cell+=c}row.push(cell);if(row.some(Boolean))rows.push(row);
- const h=(rows.shift()||[]).map(x=>norm(x).replace(/\s+/g,"_"));
- return rows.map(r=>Object.fromEntries(h.map((k,i)=>[k,clean(r[i])]))).filter(x=>x.name);
-}
-function normalize(r){
- const c=norm(r.category||r.type)||category(r.name);
- return {name:r.name,category:c==="game"?"games":c==="tool"?"tools":c==="app"?"apps":c,version:r.version||"Latest",size:r.size||"—",description:r.description||"Available release",icon:r.icon||CONFIG.DEFAULT_ICON,link:r.link||r.url||"#",date:r.date||r.updated||""};
-}
-function render(){
- const q=norm(hero.value||top.value);
- const visible=items.filter(x=>(filter==="all"||x.category===filter)&&(!q||norm(x.name+" "+x.description+" "+x.category).includes(q)));
- count.textContent=visible.length+" "+(visible.length===1?"item":"items");
- grid.innerHTML=visible.length?visible.map((a,i)=>`<article class="card" style="--delay:${i*45}ms">
-  <div class="card-bg"><img src="${esc(a.icon)}" alt="" loading="lazy"></div>
-  <div class="card-content">
-   <div class="app-top"><img class="icon" src="${esc(a.icon)}" alt="" loading="lazy"><div class="app-info"><div class="app-name">${esc(a.name)}</div><div class="meta">${esc(a.version)} <i>•</i> ${esc(size(a.size))}</div></div><span class="category-tag">${esc(a.category)}</span></div>
-   <div class="description">${esc(a.description)}</div>
-   <a class="download ${a.link==="#"?"disabled":""}" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${a.link==="#"?"Not available":"↓  Continue to download"}</a>
-   <div class="bottom-meta"><span>${a.date?"◷ "+esc(date(a.date)):"NIK MODS"}</span><span>● READY</span></div>
-  </div>
- </article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>';
-}
-function jsonpLoad(){return new Promise((resolve,reject)=>{const cb="nikModsSheetCallback",script=document.createElement("script"),timer=setTimeout(()=>{cleanup();reject(Error("Sheet JSONP timeout"))},12000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(Error("Sheet JSONP failed"))};script.src=CONFIG.JSONP_URL+"&_="+Date.now();document.head.appendChild(script)})}
-function jsonToCSV(data){const cols=(data.table?.cols||[]).map(c=>c.label||c.id||"");const rows=(data.table?.rows||[]).map(r=>{const vals=r.c||[];return cols.map((_,i)=>{const v=vals[i];return v?.f??v?.v??""}).map(v=>{v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")});return [cols.join(","),...rows].join("\n")}
-async function load(){try{let csv="";try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");csv=await res.text()}catch{const data=await jsonpLoad();csv=jsonToCSV(data)}items=parseCSV(csv).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated automatically";render()}catch(e){console.error(e);items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}}
+const date=s=>{if(!s)return"—";const d=new Date(s);return Number.isNaN(d.getTime())?s:new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",year:"numeric"}).format(d)};
+const category=s=>{const n=norm(s);return /game|pubg|bgmi|minecraft|roblox|gta|freefire|brawl|gameplay/.test(n)?"games":/tool|manager|zarchiver|termux|vpn|root|utility|editor/.test(n)?"tools":"apps"};
+function normalize(r){const c=norm(r.category)||category(r.name);return{name:clean(r.name),category:c==="game"?"games":c==="tool"?"tools":c==="app"?"apps":c||"apps",version:clean(r.version)||"Latest",size:clean(r.size)||"—",description:clean(r.description)||"Available release",icon:clean(r.icon)||CONFIG.DEFAULT_ICON,link:clean(r.link)||"#",date:clean(r.date)||clean(r.updated)||""}}
+function render(){const q=norm(hero.value||top.value);const visible=items.filter(x=>(filter==="all"||x.category===filter)&&(!q||norm(x.name+" "+x.description+" "+x.category).includes(q)));count.textContent=visible.length+" "+(visible.length===1?"item":"items");grid.innerHTML=visible.length?visible.map((a,i)=>`<article class="card" style="--delay:${i*45}ms"><div class="card-bg"><img src="${esc(a.icon)}" alt="" loading="lazy"></div><div class="card-content"><div class="app-top"><img class="icon" src="${esc(a.icon)}" alt="" loading="lazy"><div class="app-info"><div class="app-name">${esc(a.name)}</div><div class="meta">${esc(a.version)} <i>•</i> ${esc(size(a.size))}</div></div><span class="category-tag">${esc(a.category)}</span></div><div class="description">${esc(a.description)}</div><a class="download ${a.link==="#"?"disabled":""}" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">${a.link==="#"?"Not available":"↓  Continue to download"}</a><div class="bottom-meta"><span>${a.date?"◷ "+esc(date(a.date)):"NIK MODS"}</span><span>● READY</span></div></div></article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>'}
+async function load(){try{const res=await fetch(CONFIG.CATALOG_URL+"?v="+Date.now(),{cache:"no-store"});if(!res.ok)throw Error("Catalog HTTP "+res.status);const data=await res.json();if(!Array.isArray(data))throw Error("Catalog format invalid");items=data.map(normalize).filter(x=>x.name);document.querySelector("#sourceNote").textContent="Live catalog • Auto-synced from Google Sheets";render()}catch(e){console.error("NIK MODS catalog error:",e);items=[];count.textContent="0 items";grid.innerHTML='<div class="empty"><strong>Catalog temporarily unavailable.</strong><br>Please try again in a moment.</div>'}}
 function sync(a,b){a.addEventListener("input",()=>{b.value=a.value;render()})}
 sync(hero,top);sync(top,hero);
 $("#filters").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("active"));b.classList.add("active");filter=b.dataset.filter;render()});
-$("#year").textContent=new Date().getFullYear();load();
+$("#year").textContent=new Date().getFullYear();
+load();
