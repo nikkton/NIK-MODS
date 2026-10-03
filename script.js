@@ -2,8 +2,8 @@
   const CONFIG = {
     CATALOG_URL: "catalog.json",
     DEFAULT_ICON: "assets/nik-logo.svg",
-    // Feedback endpoint URL (e.g. Cloudflare Worker or Vercel API):
-    // Deploy worker/feedback-worker.js and configure your worker URL here.
+    // Feedback endpoint URL:
+    // Connected to deployed Cloudflare Worker: nik-mods-feedback
     FEEDBACK_ENDPOINT: "https://nik-mods-feedback.godrp3236.workers.dev"
   };
 

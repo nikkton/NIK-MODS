@@ -1,17 +1,30 @@
-# NIK MODS — Anonymous Feedback Backend Setup
+# NIK MODS — Anonymous Feedback Backend
 
-This document describes how to deploy the secure, free serverless backend for anonymous feedback and connect it to the NIK MODS website.
+Secure serverless backend for anonymous user feedback on NIK MODS, delivering visitor messages directly to Telegram while strictly protecting visitor privacy and secret credentials.
 
 ---
 
-## 1. Architecture Overview
+## 1. Setup Status
+
+The feedback system setup is complete and connected.
+
+| Step | Component | Status | Details |
+|---|---|---|---|
+| **1** | **Cloudflare Worker Deployment** | **COMPLETED** | Worker `nik-mods-feedback` is live at `https://nik-mods-feedback.godrp3236.workers.dev` |
+| **2** | **Telegram Secret Configuration** | **COMPLETED** | `TELEGRAM_BOT_TOKEN` is configured as an encrypted secret in Cloudflare (never committed or exposed) |
+| **3** | **Website Endpoint Connection** | **COMPLETED** | `script.js` configured with `https://nik-mods-feedback.godrp3236.workers.dev` |
+| **4** | **End-to-End Live Testing** | **PENDING LIVE TEST** | Send a live test message from the website modal and verify receipt in Telegram chat `1840373853` |
+
+---
+
+## 2. Architecture Overview
 
 ```
 Visitor Browser (GitHub Pages)
        │
-       │  POST { message } (No identity collected, no bot token exposed)
+       │  POST { message } (No identity collected, zero bot token exposure)
        ▼
-Cloudflare Worker (Free Serverless Edge)
+Cloudflare Worker (nik-mods-feedback)
   [Encrypted Secret: TELEGRAM_BOT_TOKEN]
        │
        │  POST https://api.telegram.org/bot<TOKEN>/sendMessage
@@ -19,90 +32,81 @@ Cloudflare Worker (Free Serverless Edge)
 Telegram Bot (@NIKMODSFeedbackBot)
        │
        ▼
-Your Telegram Chat (ID: 1840373853)
+Destination Telegram Chat (ID: 1840373853)
 ```
 
 ### Security & Privacy Guarantees
-- **Zero Token Exposure:** The bot token `TELEGRAM_BOT_TOKEN` is NEVER exposed to the browser, JavaScript, CSS, or git repository.
-- **Anonymous:** No names, emails, phone numbers, Telegram usernames, or visitor identity information are collected or forwarded.
-- **Spam Protection:** Includes an invisible honeypot field and in-memory rate limiting to prevent spam.
+- **Zero Token Exposure:** The bot token `TELEGRAM_BOT_TOKEN` is NEVER exposed to the browser, client-side JavaScript, CSS, or git repository.
+- **Strictly Anonymous:** No names, emails, phone numbers, IP addresses, Telegram usernames, or visitor identity details are forwarded to Telegram or logged.
+- **Spam & Abuse Protection:** Includes an invisible honeypot field (`_hp_site`) and in-memory rate limiting (max 5 submissions per minute per IP).
+- **CORS Restricted:** Validated HTTP POST and preflight OPTIONS handling.
 
 ---
 
-## 2. Deployment: Cloudflare Workers (Recommended & Free)
+## 3. Configuration Reference
 
-Cloudflare Workers provides **100,000 requests per day for free forever**, with no credit card required.
+### Active Cloudflare Worker
+- **Name:** `nik-mods-feedback`
+- **Live Endpoint URL:** `https://nik-mods-feedback.godrp3236.workers.dev`
+- **Worker Code:** [`worker/feedback-worker.js`](../worker/feedback-worker.js)
+- **Wrangler Configuration:** [`wrangler.toml`](../wrangler.toml)
+- **Environment Variables & Secrets:**
+  - `TELEGRAM_CHAT_ID`: `1840373853` (defined in `wrangler.toml`)
+  - `TELEGRAM_BOT_TOKEN`: Encrypted Secret (configured in Cloudflare)
 
-### Method A: Cloudflare Web Dashboard (Quickest — ~2 minutes)
-
-1. Log in to [dash.cloudflare.com](https://dash.cloudflare.com/).
-2. On the left navigation, click **Compute (Workers & Pages)** → **Create Application** → **Worker**.
-3. Name your worker (for example: `nik-mods-feedback`), then click **Deploy**.
-4. In the worker overview, click **Edit code**.
-5. Replace all code in `worker.js` with the contents of [`worker/feedback-worker.js`](../worker/feedback-worker.js) from this repository.
-6. Click **Deploy** in the top right.
-7. Return to the worker page, click the **Settings** tab → **Variables and Secrets**.
-8. Under **Secrets**, click **Add**:
-   - **Variable name**: `TELEGRAM_BOT_TOKEN`
-   - **Type**: `Secret` (encrypted)
-   - **Value**: Paste your bot token (from `@BotFather` / GitHub Actions Secret)
-   - Click **Save and Deploy**.
-9. Copy your Worker URL from the dashboard (e.g., `https://nik-mods-feedback.<your-subdomain>.workers.dev`).
-
-### Method B: Wrangler CLI (Alternative)
-
-If you prefer deploying via terminal:
-```bash
-# 1. Login to Cloudflare
-npx wrangler login
-
-# 2. Add the encrypted secret
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-# (paste your bot token when prompted)
-
-# 3. Deploy the worker
-npx wrangler deploy
+### Website Integration
+Configured in [`script.js`](../script.js):
+```javascript
+const CONFIG = {
+  CATALOG_URL: "catalog.json",
+  DEFAULT_ICON: "assets/nik-logo.svg",
+  FEEDBACK_ENDPOINT: "https://nik-mods-feedback.godrp3236.workers.dev"
+};
 ```
 
 ---
 
-## 3. Connect the Worker to NIK MODS Website
+## 4. Maintenance & Operations Reference
 
-Once your worker is deployed:
+The Worker and website connection are already fully deployed. The following instructions are preserved for future maintenance, code updates, or secret rotation.
 
-1. Open [`script.js`](../script.js).
-2. Set `FEEDBACK_ENDPOINT` to your Cloudflare Worker URL:
-   ```javascript
-   const CONFIG = {
-     CATALOG_URL: "catalog.json",
-     DEFAULT_ICON: "assets/nik-logo.svg",
-     FEEDBACK_ENDPOINT: "https://nik-mods-feedback.<your-subdomain>.workers.dev"
-   };
-   ```
-3. Commit and push the change to `main`.
-4. The feedback form is now live and functional!
+### Updating Worker Code (Optional / Future Maintenance)
+If code inside `worker/feedback-worker.js` is modified:
+```bash
+# 1. Login to Cloudflare via Wrangler CLI
+npx wrangler login
+
+# 2. Deploy updates to the existing worker
+npx wrangler deploy
+```
+Or edit the code in the [Cloudflare Dashboard](https://dash.cloudflare.com/) under **Workers & Pages** → **nik-mods-feedback** → **Edit code**.
+
+### Rotating the Telegram Secret (Optional / Future Maintenance)
+If the Telegram bot token ever needs to be updated:
+```bash
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+```
+Or update it in the Cloudflare Dashboard under **nik-mods-feedback** → **Settings** → **Variables and Secrets** → **Secrets**.
 
 ---
 
-## 4. Alternative: Vercel Serverless Function
+## 5. Alternative Backend: Vercel Function (Reference)
 
-If you ever deploy or mirror NIK MODS on Vercel:
-1. The [`api/feedback.js`](../api/feedback.js) file is pre-configured.
-2. In your Vercel Project Settings → **Environment Variables**, add:
+If the site is ever mirrored or hosted on Vercel:
+1. The [`api/feedback.js`](../api/feedback.js) serverless function is pre-configured.
+2. In Vercel Project Settings → **Environment Variables**, set:
    - `TELEGRAM_BOT_TOKEN`: `<your-bot-token>`
-3. In [`script.js`](../script.js), set:
-   ```javascript
-   FEEDBACK_ENDPOINT: "/api/feedback"
-   ```
+   - `TELEGRAM_CHAT_ID`: `1840373853`
+3. Set `FEEDBACK_ENDPOINT: "/api/feedback"` in `script.js`.
 
 ---
 
-## 5. Verification Checklist
+## 6. Verification Checklist
 
-- [x] Workflow catalog sync runs every 5 minutes (`*/5 * * * *`).
-- [x] Website wording updated to `"Latest releases, curated for NIK MODS."`.
-- [x] Telegram channel link added to header (`https://t.me/nikxtech`).
-- [x] Feedback button in footer opens a clean, dark modal.
-- [x] Form asks only for the feedback message (no personal info).
-- [x] Submission shows `"Thanks for your feedback."`.
-- [x] Telegram bot token is never exposed to the client.
+- [x] Cloudflare Worker deployed (`nik-mods-feedback` at `https://nik-mods-feedback.godrp3236.workers.dev`)
+- [x] Telegram bot token configured as encrypted secret in Cloudflare
+- [x] Website `script.js` connected to the active Worker endpoint
+- [x] Token audit: Zero bot tokens or secrets committed to repository
+- [x] Anti-spam honeypot and rate limiting implemented
+- [x] Feedback modal UI and status notifications ready
+- [ ] Live end-to-end feedback delivery test (submit test message on live site and verify receipt in Telegram chat `1840373853`)
