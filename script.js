@@ -4,7 +4,7 @@
     DEFAULT_ICON: "assets/nik-logo.svg",
     // Feedback endpoint URL (e.g. Cloudflare Worker or Vercel API):
     // Deploy worker/feedback-worker.js and configure your worker URL here.
-    FEEDBACK_ENDPOINT: ""
+    FEEDBACK_ENDPOINT: "https://nik-mods-feedback.godrp3236.workers.dev"
   };
 
   const $ = s => document.querySelector(s);
