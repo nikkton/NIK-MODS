@@ -36,10 +36,9 @@ function render(){
   </div>
  </article>`).join(""):'<div class="empty"><strong>Nothing here yet.</strong><br>Try another search or category.</div>';
 }
-async function load(){
- try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");items=parseCSV(await res.text()).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated automatically";render()}
- catch(e){items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}
-}
+function jsonpLoad(){return new Promise((resolve,reject)=>{const cb="nikModsSheetCallback",script=document.createElement("script"),timer=setTimeout(()=>{cleanup();reject(Error("Sheet JSONP timeout"))},12000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(Error("Sheet JSONP failed"))};script.src=CONFIG.JSONP_URL+"&_="+Date.now();document.head.appendChild(script)})}
+function jsonToCSV(data){const cols=(data.table?.cols||[]).map(c=>c.label||c.id||"");const rows=(data.table?.rows||[]).map(r=>{const vals=r.c||[];return cols.map((_,i)=>{const v=vals[i];return v?.f??v?.v??""}).map(v=>{v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")});return [cols.join(","),...rows].join("\n")}
+async function load(){try{let csv="";try{const res=await fetch(CONFIG.CSV_URL,{cache:"no-store"});if(!res.ok)throw Error("Sheet unavailable");csv=await res.text()}catch{const data=await jsonpLoad();csv=jsonToCSV(data)}items=parseCSV(csv).map(normalize);document.querySelector("#sourceNote").textContent="Live catalog • Updated automatically";render()}catch(e){console.error(e);items=[];count.textContent="—";grid.innerHTML='<div class="empty"><strong>Catalog unavailable.</strong><br>Check the Google Sheets connection.</div>'}}
 function sync(a,b){a.addEventListener("input",()=>{b.value=a.value;render()})}
 sync(hero,top);sync(top,hero);
 $("#filters").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("active"));b.classList.add("active");filter=b.dataset.filter;render()});
