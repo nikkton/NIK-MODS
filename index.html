@@ -1,106 +1,364 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#050505">
-<meta name="description" content="NIK MODS — a clean home for apps, games and tools.">
-<meta name="monetag" content="746e266d24bf198f838dbdf89834fb74">
-<title>NIK MODS — Downloads</title>
-<link rel="icon" href="assets/nik-logo.svg">
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#020202">
+    <meta name="description" content="NIK MODS — Apps. Games. Tools. Nothing unnecessary.">
+    <meta name="monetag" content="746e266d24bf198f838dbdf89834fb74">
+    <title>NIK MODS | Elite Access</title>
+    
+    <link rel="icon" href="assets/nik-logo.svg">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Space Grotesk for futuristic UI, JetBrains Mono for Code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- GSAP for Smooth Scroll Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- Tailwind Config for Custom Colors & Fonts -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            accent: '#ff003c',
+                            dark: '#050505',
+                            light: '#f8f9fa',
+                            glass: 'rgba(255, 255, 255, 0.08)',
+                            glassDark: 'rgba(0, 0, 0, 0.4)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
-<body>
-<div class="noise"></div><div class="blood-bg"></div>
-<header class="topbar">
-  <a class="brand" href="./"><img src="assets/nik-logo.svg" alt="NIK"><span>NIK MODS</span></a>
-  <nav aria-label="Main navigation">
-    <a class="active" href="#home">Home</a><a href="#catalog">Apps</a><a href="#catalog">Games</a><a href="#catalog">Tools</a><a href="#updates">Updates</a>
-  </nav>
-  <label class="top-search">⌕<input id="topSearch" placeholder="Search..." autocomplete="off" aria-label="Search"></label>
-  <a class="topbar-tg" href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" aria-label="Telegram Channel" title="Join NIK MODS Telegram">
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.77-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/></svg>
-    <span>Telegram</span>
-  </a>
-  <button class="menu" aria-label="Menu">☰</button>
-</header>
+<body class="antialiased font-sans selection:bg-brand-accent selection:text-white">
 
-<main id="home">
-<section class="hero">
-  <div class="hero-scene" aria-hidden="true"><div class="scene-ring"></div><div class="scene-grid"></div><img src="assets/nik-logo.svg" alt=""><div class="scene-glow"></div></div>
-  <div class="hero-content">
-    <p class="eyebrow">ANDROID • APPS • GAMES • TOOLS</p>
-    <h1>Apps. Games. Tools.<br><span>Nothing unnecessary.</span></h1>
-    <p class="hero-copy">Discover useful releases. Choose what you need and continue to download.</p>
-    <label class="hero-search">⌕<input id="heroSearch" placeholder="Search apps, games, tools..." autocomplete="off" aria-label="Search catalog"></label>
-    <div class="filters" id="filters">
-      <button class="active" data-filter="all">✦ All</button><button data-filter="apps">▦ Apps</button><button data-filter="games">🎮 Games</button><button data-filter="tools">⚒ Tools</button>
-    </div>
-  </div>
-</section>
+    <div class="particles-container" id="particles"></div>
+    
+    <!-- Ambient Light Orbs -->
+    <div class="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-white/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen z-[-1]"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-brand-accent/5 rounded-full blur-[120px] pointer-events-none mix-blend-screen z-[-1]"></div>
 
-<section class="catalog" id="catalog">
-  <div class="section-head"><div><p class="eyebrow">DOWNLOAD CATALOG</p><h2>Find your download.</h2></div><span id="count">—</span></div>
-  <div id="sourceNote" class="source-note">Latest releases, curated for NIK MODS.</div>
-  <div id="grid" class="grid"></div>
-</section>
+    <!-- Mobile Container (Max width for desktop, full width for mobile) -->
+    <div class="max-w-md mx-auto min-h-screen relative flex flex-col">
 
-<section class="updates" id="updates">
-  <div><p class="eyebrow">NIK MODS</p><h2>Clean. Fast. Focused.</h2><p>A simple catalog for discovering the apps, games and tools you are looking for.</p></div>
-  <div class="update-pill">NEW <b>RELEASES</b></div>
-</section>
-</main>
+        <!-- Header -->
+        <header class="sticky top-0 z-[90] glass-ultra px-5 py-4 flex items-center justify-between mx-2 mt-2 rounded-2xl mb-6 transition-all duration-300" id="mainHeader">
+            <a href="./" class="flex items-center gap-3 group text-left">
+                <!-- Premium Logo Treatment -->
+                <div class="relative group cursor-pointer">
+                    <div class="absolute inset-0 bg-white/20 rounded-xl blur-md group-hover:bg-brand-accent/30 transition-all duration-500"></div>
+                    <div class="w-10 h-10 rounded-xl glass-card flex items-center justify-center relative z-10 overflow-hidden border border-white/20">
+                        <i class="fa-solid fa-crown text-white group-hover:text-brand-accent transition-colors duration-300"></i>
+                        <!-- Shine effect -->
+                        <div class="absolute top-0 left-[-100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-45deg] group-hover:animate-[shine_1s_ease-in-out]"></div>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold tracking-[0.2em] text-white">NIK MODS</span>
+                    <span class="text-[9px] font-mono text-gray-400">PREMIUM CATALOG</span>
+                </div>
+            </a>
 
-<footer>
-  <div class="footer-left">
-    <span>© <span id="year"></span> NIK MODS</span>
-    <button type="button" class="footer-btn" id="openFeedback">Feedback</button>
-  </div>
-  <span>Only distribute files you have the right to distribute.</span>
-</footer>
+            <!-- Header Actions -->
+            <div class="flex items-center gap-4">
+                <a href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" class="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-300 hover:text-white transition-all hover:scale-105 chasing-border" aria-label="Telegram Channel" title="Join NIK MODS Telegram">
+                    <i class="fa-brands fa-telegram text-sm"></i>
+                </a>
+                <button id="navToggleBtn" class="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-300 hover:text-white transition-all hover:scale-105 chasing-border relative z-[100]" aria-label="Toggle navigation menu">
+                    <i id="navIcon" class="fa-solid fa-bars text-sm transition-transform duration-300"></i>
+                </button>
+            </div>
+        </header>
 
-<!-- Feedback Modal -->
-<div id="feedbackModal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="feedbackTitle">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div class="modal-title-wrap">
-        <p class="eyebrow" style="margin-bottom:4px">NIK MODS</p>
-        <h3 id="feedbackTitle">Anonymous Feedback</h3>
-      </div>
-      <button type="button" class="modal-close" id="closeFeedback" aria-label="Close modal">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="feedbackForm">
-        <!-- Anti-spam honeypot -->
-        <input type="text" name="_hp_site" style="display:none!important" tabindex="-1" autocomplete="off">
-        <p class="modal-desc">Share your suggestions, app requests, or feedback. No personal information is requested or collected.</p>
-        <div class="field-wrap">
-          <textarea id="feedbackText" name="message" maxlength="1000" rows="5" placeholder="Write your message here..." required></textarea>
-          <div class="field-meta">
-            <span class="field-hint">Anonymous</span>
-            <span class="char-count" id="charCount">0 / 1000</span>
-          </div>
+        <!-- Navigation Overlay -->
+        <div id="navOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-2xl z-[85] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-all duration-500">
+            <!-- Inner Glow -->
+            <div class="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-brand-accent/10 rounded-full blur-[100px] pointer-events-none"></div>
+            
+            <div class="w-full max-w-sm px-6 flex flex-col gap-4 relative z-10">
+                <!-- Catalog Navigation Pills -->
+                <div class="nav-item opacity-0 translate-y-8 glass-card p-4 rounded-3xl border border-white/10">
+                    <span class="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase mb-3 block px-1">QUICK JUMP</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="navFilter('all')" class="flex items-center gap-2 p-2.5 rounded-xl glass-ultra text-xs font-mono text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                            <i class="fa-solid fa-star text-brand-accent text-xs"></i> All Releases
+                        </button>
+                        <button type="button" onclick="navFilter('apps')" class="flex items-center gap-2 p-2.5 rounded-xl glass-ultra text-xs font-mono text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                            <i class="fa-solid fa-table-cells-large text-brand-accent text-xs"></i> Apps
+                        </button>
+                        <button type="button" onclick="navFilter('games')" class="flex items-center gap-2 p-2.5 rounded-xl glass-ultra text-xs font-mono text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                            <i class="fa-solid fa-gamepad text-brand-accent text-xs"></i> Games
+                        </button>
+                        <button type="button" onclick="navFilter('tools')" class="flex items-center gap-2 p-2.5 rounded-xl glass-ultra text-xs font-mono text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                            <i class="fa-solid fa-hammer text-brand-accent text-xs"></i> Tools
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tip a Coffee -->
+                <a href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" class="nav-item opacity-0 translate-y-8 flex items-center gap-5 p-5 rounded-[2rem] glass-card border border-white/10 hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all duration-300 group">
+                    <div class="w-14 h-14 rounded-2xl glass-ultra flex items-center justify-center bg-yellow-500/10 text-yellow-500 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_20px_rgba(234,179,8,0.1)]">
+                        <i class="fa-solid fa-mug-hot text-2xl drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"></i>
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-bold tracking-[0.2em] text-yellow-500/70 uppercase mb-1 block">Support Creator</span>
+                        <h3 class="text-xl font-bold text-white tracking-wide group-hover:text-yellow-500 transition-colors">Tip a Coffee</h3>
+                    </div>
+                </a>
+
+                <!-- Send Feedback -->
+                <button type="button" onclick="openFeedbackFromNav()" class="nav-item opacity-0 translate-y-8 w-full text-left flex items-center gap-5 p-5 rounded-[2rem] glass-card border border-white/10 hover:border-brand-accent/50 hover:bg-brand-accent/5 transition-all duration-300 group">
+                    <div class="w-14 h-14 rounded-2xl glass-ultra flex items-center justify-center bg-white/5 text-white/70 group-hover:bg-brand-accent group-hover:text-white group-hover:scale-110 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_20px_rgba(255,0,60,0.3)]">
+                        <i class="fa-solid fa-comment-dots text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase mb-1 block">Improve Catalog</span>
+                        <h3 class="text-xl font-bold text-white tracking-wide group-hover:text-brand-accent transition-colors">Send Feedback</h3>
+                    </div>
+                </button>
+            </div>
         </div>
-        <div id="feedbackAlert" class="feedback-alert" aria-live="polite"></div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" id="cancelFeedback">Cancel</button>
-          <button type="submit" class="btn-primary" id="submitFeedback">
-            <span class="btn-label">Submit</span>
-          </button>
-        </div>
-      </form>
-      <div id="feedbackSuccess" class="feedback-success-view" style="display:none">
-        <div class="feedback-success-icon">✓</div>
-        <h4>Thanks for your feedback.</h4>
-        <p class="modal-desc">Your message has been sent to the NIK MODS team.</p>
-        <div class="modal-actions" style="justify-content:center">
-          <button type="button" class="btn-primary" id="doneFeedback">Done</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<script src="script.js?v=10" defer></script>
+        <main class="flex-1 px-4 pb-12" id="home">
+            
+            <!-- Hero Content -->
+            <div class="text-center mb-12 mt-4 gsap-reveal">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-ultra border border-brand-accent/30 mb-6">
+                    <span class="w-2 h-2 rounded-full bg-brand-accent animate-pulse shadow-[0_0_8px_#ff003c]"></span>
+                    <span class="text-[9px] font-mono tracking-widest text-brand-accent uppercase">ANDROID • APPS • GAMES • TOOLS</span>
+                </div>
+                
+                <h1 class="text-4xl font-light text-white leading-tight mb-2 tracking-tight">
+                    Apps. Games. Tools. <br>
+                    <span class="font-bold text-brand-accent">Nothing unnecessary.</span>
+                </h1>
+                
+                <p class="text-gray-400 text-sm mt-6 max-w-[280px] mx-auto leading-relaxed">
+                    Discover useful releases. Choose what you need and continue to download.
+                </p>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="mb-10 gsap-reveal">
+                <!-- Search Bar - Sleek input -->
+                <div class="relative mb-6 group transition-all duration-500 ease-out hover:scale-[1.01]">
+                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-white/30 group-focus-within:text-brand-accent transition-colors duration-300 group-focus-within:animate-pulse"></i>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="" autocomplete="off" aria-label="Search apps, games, tools"
+                        class="w-full glass-ultra text-white text-sm rounded-2xl pl-12 pr-16 py-4 focus:outline-none focus:border-brand-accent/50 focus:bg-white/10 transition-all duration-300 font-mono placeholder-white/30 shadow-lg group-focus-within:shadow-[0_0_25px_rgba(255,0,60,0.15)]">
+                    <!-- Right decorative element -->
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none transition-opacity duration-300 group-focus-within:opacity-0">
+                        <span class="text-[10px] text-white/20 font-mono border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-sm">CMD+K</span>
+                    </div>
+                </div>
+
+                <!-- Filter Pills -->
+                <div class="flex overflow-x-auto gap-3 hide-scroll pb-2 px-1" id="filterContainer">
+                    <button class="filter-btn active px-6 py-2.5 rounded-full text-xs font-bold border border-white/30 bg-white/10 text-white whitespace-nowrap shadow-[0_0_15px_rgba(255,255,255,0.1)] backdrop-blur-md transition-all chasing-border" data-filter="all">
+                        <i class="fa-solid fa-star mr-1 opacity-70"></i> All
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="apps">
+                        <i class="fa-solid fa-table-cells-large mr-1 opacity-70"></i> Apps
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="games">
+                        <i class="fa-solid fa-gamepad mr-1 opacity-70"></i> Games
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="tools">
+                        <i class="fa-solid fa-hammer mr-1 opacity-70"></i> Tools
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="social">
+                        <i class="fa-solid fa-hashtag mr-1 opacity-70"></i> Social
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="media">
+                        <i class="fa-solid fa-photo-film mr-1 opacity-70"></i> Media
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="tweaks">
+                        <i class="fa-solid fa-sliders mr-1 opacity-70"></i> Tweaks
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="utility">
+                        <i class="fa-solid fa-wrench mr-1 opacity-70"></i> Utility
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="system">
+                        <i class="fa-solid fa-microchip mr-1 opacity-70"></i> System
+                    </button>
+                    <button class="filter-btn px-6 py-2.5 rounded-full text-xs font-medium border border-white/5 bg-transparent text-white/50 hover:text-white hover:border-white/20 whitespace-nowrap transition-all chasing-border" data-filter="emulators">
+                        <i class="fa-solid fa-mobile-screen mr-1 opacity-70"></i> Emulators
+                    </button>
+                </div>
+            </div>
+
+            <!-- Download Catalog Heading -->
+            <div class="mb-6 flex justify-between items-end px-2 gsap-fade" id="catalog">
+                <div>
+                    <span class="text-[9px] font-bold tracking-[0.2em] text-brand-accent uppercase mb-1 block">DOWNLOAD CATALOG</span>
+                    <h2 class="text-2xl font-semibold text-white tracking-tight">Find your download.</h2>
+                    <p class="text-xs text-white/40 mt-1" id="sourceNote">Latest releases, curated for NIK MODS.</p>
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs text-white/30 font-mono" id="itemCount">—</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Catalog Cards Container (No hardcoded cards) -->
+            <div class="space-y-6" id="catalogList">
+                <div class="glass-card rounded-3xl p-8 text-center relative overflow-hidden">
+                    <div class="w-12 h-12 mx-auto mb-4 rounded-2xl glass-ultra flex items-center justify-center text-brand-accent animate-pulse border border-brand-accent/30 shadow-[0_0_20px_rgba(255,0,60,0.2)]">
+                        <i class="fa-solid fa-circle-notch fa-spin text-xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-white tracking-wide">Syncing catalog...</div>
+                    <div class="text-xs text-white/40 mt-1 font-mono">Fetching latest releases</div>
+                </div>
+            </div>
+
+            <!-- COMMUNITY CAROUSEL SECTION -->
+            <div class="mt-16 mb-8 relative gsap-reveal" id="communityCarousel">
+                
+                <!-- Glowing Progress Bars -->
+                <div class="flex gap-2 mb-4 px-6 justify-center relative z-20">
+                    <div class="h-1 flex-1 bg-white/10 rounded-full overflow-hidden max-w-[80px] cursor-pointer" onclick="goToSlide(0)">
+                        <div class="h-full bg-brand-accent w-0 shadow-[0_0_10px_#ff003c]" id="progress0"></div>
+                    </div>
+                    <div class="h-1 flex-1 bg-white/10 rounded-full overflow-hidden max-w-[80px] cursor-pointer" onclick="goToSlide(1)">
+                        <div class="h-full bg-brand-accent w-0 shadow-[0_0_10px_#ff003c]" id="progress1"></div>
+                    </div>
+                </div>
+
+                <!-- Carousel Container -->
+                <div class="p-1 rounded-[2rem] bg-gradient-to-b from-brand-accent/20 to-transparent overflow-hidden">
+                    <div class="flex transition-transform duration-500 ease-out" id="carouselTrack">
+                        
+                        <!-- Slide 1: Telegram -->
+                        <div class="w-full shrink-0">
+                            <div class="glass-ultra rounded-[1.8rem] p-8 text-center relative overflow-hidden group h-full">
+                                <div class="absolute inset-0 bg-brand-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                                <div class="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-[radial-gradient(ellipse_at_center,rgba(255,0,60,0.15)_0%,transparent_70%)] pointer-events-none mix-blend-screen"></div>
+                                
+                                <div class="w-16 h-16 mx-auto rounded-2xl glass-card flex items-center justify-center mb-6 relative z-10 border border-brand-accent/30 shadow-[0_0_30px_rgba(255,0,60,0.2)] group-hover:scale-110 transition-transform duration-500">
+                                    <i class="fa-brands fa-telegram text-4xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]"></i>
+                                </div>
+            
+                                <span class="text-[9px] font-bold tracking-[0.2em] text-brand-accent uppercase mb-3 block relative z-10">COMMUNITY NETWORK</span>
+                                
+                                <h2 class="text-3xl font-bold text-white mb-3 relative z-10">Join the Inner Circle.</h2>
+                                <p class="text-white/60 text-sm mb-8 mx-auto leading-relaxed relative z-10 max-w-[280px]">Get real-time alerts for new premium drops, request specific mods, and stay ahead of the curve.</p>
+                                
+                                <a href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" class="w-auto inline-flex items-center justify-center gap-3 glass-card border border-brand-accent/50 text-white px-8 py-3.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 hover:bg-brand-accent hover:text-white hover:border-brand-accent relative z-10 chasing-border shadow-[0_0_20px_rgba(255,0,60,0.15)] hover:shadow-[0_0_30px_rgba(255,0,60,0.4)]">
+                                    <i class="fa-brands fa-telegram text-sm"></i>
+                                    CONNECT NOW
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 2: YouTube -->
+                        <div class="w-full shrink-0">
+                            <div class="glass-ultra rounded-[1.8rem] p-8 text-center relative overflow-hidden group h-full">
+                                <div class="absolute inset-0 bg-[#FF0000]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                                <div class="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-[radial-gradient(ellipse_at_center,rgba(255,0,0,0.15)_0%,transparent_70%)] pointer-events-none mix-blend-screen"></div>
+                                
+                                <div class="w-16 h-16 mx-auto rounded-2xl glass-card flex items-center justify-center mb-6 relative z-10 border border-[#FF0000]/30 shadow-[0_0_30px_rgba(255,0,0,0.2)] group-hover:scale-110 transition-transform duration-500">
+                                    <i class="fa-brands fa-youtube text-4xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]"></i>
+                                </div>
+            
+                                <span class="text-[9px] font-bold tracking-[0.2em] text-[#FF0000] uppercase mb-3 block relative z-10">VIDEO NETWORK</span>
+                                
+                                <h2 class="text-3xl font-bold text-white mb-3 relative z-10">Watch the Action.</h2>
+                                <p class="text-white/60 text-sm mb-8 mx-auto leading-relaxed relative z-10 max-w-[280px]">Check out gameplay, mod reviews, installation guides, and exclusive footage on our channel.</p>
+                                
+                                <button type="button" class="w-auto inline-flex items-center justify-center gap-3 glass-card border border-[#FF0000]/30 text-white/50 px-8 py-3.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 cursor-not-allowed relative z-10 opacity-70" title="Channel coming soon">
+                                    <i class="fa-brands fa-youtube text-sm text-[#FF0000]/70"></i>
+                                    COMING SOON
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-auto px-6 py-8 border-t border-white/5 text-center flex flex-col items-center glass-ultra rounded-t-3xl mx-2">
+            <div class="flex justify-between items-center w-full mb-6">
+                <span class="text-white/50 text-xs font-medium tracking-wide">© <span id="year">2026</span> NIK MODS</span>
+                
+                <button type="button" onclick="toggleFeedback()" class="glass-card hover:bg-white/10 border border-white/10 text-white/80 px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center gap-2 chasing-border">
+                    <i class="fa-regular fa-comment-dots text-xs"></i> Feedback
+                </button>
+            </div>
+            <div class="w-full text-left">
+                <p class="text-xs text-white/30">Only distribute files you have the right to distribute.</p>
+            </div>
+        </footer>
+
+        <!-- REAL ANONYMOUS FEEDBACK MODAL -->
+        <div id="feedbackModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl z-[100] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-500" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
+            <div class="glass-ultra rounded-[2rem] w-full max-w-sm p-8 transform scale-95 transition-transform duration-500 relative overflow-hidden" id="modalContent">
+                
+                <div class="flex justify-between items-center mb-6 relative z-10">
+                    <div>
+                        <span class="text-[9px] font-bold tracking-[0.2em] text-brand-accent uppercase mb-1 block">ANONYMOUS TRANSMISSION</span>
+                        <h3 class="text-xl font-light text-white tracking-wide" id="modalTitle">
+                            Transmit <span class="font-bold">Signal</span>
+                        </h3>
+                    </div>
+                    <button type="button" onclick="toggleFeedback()" class="w-8 h-8 flex items-center justify-center rounded-full glass-card text-white/50 hover:text-white transition-all" aria-label="Close modal">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <form id="feedbackForm" onsubmit="handleFeedbackSubmit(event)">
+                    <!-- Anti-spam honeypot -->
+                    <input type="text" name="_hp_site" style="display:none!important" tabindex="-1" autocomplete="off">
+                    
+                    <div class="relative z-10 group mb-2 rounded-2xl overflow-hidden glass-card border border-white/15 bg-white/5 transition-all duration-300 focus-within:border-brand-accent/50 focus-within:bg-white/10 focus-within:shadow-[0_0_20px_rgba(255,0,60,0.15)]">
+                        <!-- Continuous shining highlight -->
+                        <div class="absolute top-0 left-[-100%] w-[120%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-30deg] animate-[shine-across_3.5s_infinite_ease-in-out] pointer-events-none"></div>
+                        
+                        <textarea id="feedbackText" rows="4" maxlength="1000" class="w-full bg-transparent p-5 text-sm text-white focus:outline-none resize-none font-mono placeholder-white/40 relative z-20" placeholder="Enter transmission details (anonymous)..." required></textarea>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[10px] font-mono text-white/40 mb-4 px-1">
+                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> SECURE & ANONYMOUS</span>
+                        <span id="charCount">0 / 1000</span>
+                    </div>
+
+                    <div id="feedbackAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-mono"></div>
+                    
+                    <button id="submitFeedbackBtn" type="submit" class="relative z-10 w-full bg-white text-black font-bold tracking-widest py-4 rounded-2xl text-xs transition-all hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-[1.02] overflow-hidden chasing-border flex items-center justify-center gap-2">
+                        <span class="relative z-20 flex items-center justify-center gap-2" id="btnText">SEND DATA</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Logic Script -->
+    <script src="script.js?v=11" defer></script>
 </body>
 </html>
