@@ -1,7 +1,10 @@
 (() => {
   const CONFIG = {
     CATALOG_URL: "catalog.json",
-    DEFAULT_ICON: "assets/nik-logo.svg"
+    DEFAULT_ICON: "assets/nik-logo.svg",
+    // Feedback endpoint URL (e.g. Cloudflare Worker or Vercel API):
+    // Deploy worker/feedback-worker.js and configure your worker URL here.
+    FEEDBACK_ENDPOINT: ""
   };
 
   const $ = s => document.querySelector(s);
@@ -126,7 +129,7 @@
       if (!Array.isArray(data)) throw new Error("Catalog format invalid");
       items = data.map(normalize).filter(x => x.name);
       if (sourceNote) {
-        sourceNote.textContent = "Live catalog • Auto-synced from Google Sheets";
+        sourceNote.textContent = "Latest releases, curated for NIK MODS.";
       }
       render();
     } catch (e) {
@@ -186,6 +189,155 @@
   const yearEl = $("#year");
   if (yearEl) {
     yearEl.textContent = new Date().getFullYear();
+  }
+
+  // Feedback Modal Logic
+  const feedbackModal = $("#feedbackModal");
+  const openFeedback = $("#openFeedback");
+  const closeFeedback = $("#closeFeedback");
+  const cancelFeedback = $("#cancelFeedback");
+  const doneFeedback = $("#doneFeedback");
+  const feedbackForm = $("#feedbackForm");
+  const feedbackText = $("#feedbackText");
+  const charCount = $("#charCount");
+  const feedbackAlert = $("#feedbackAlert");
+  const submitFeedback = $("#submitFeedback");
+  const feedbackSuccess = $("#feedbackSuccess");
+
+  function showAlert(msg, type = "error") {
+    if (!feedbackAlert) return;
+    feedbackAlert.className = "feedback-alert " + type;
+    feedbackAlert.textContent = msg;
+    feedbackAlert.style.display = "block";
+  }
+
+  function clearAlert() {
+    if (!feedbackAlert) return;
+    feedbackAlert.className = "feedback-alert";
+    feedbackAlert.textContent = "";
+    feedbackAlert.style.display = "none";
+  }
+
+  function updateCharCount() {
+    if (!feedbackText || !charCount) return;
+    const len = feedbackText.value.length;
+    charCount.textContent = `${len} / 1000`;
+    charCount.classList.toggle("limit", len >= 950);
+  }
+
+  function openModal() {
+    if (!feedbackModal) return;
+    feedbackModal.classList.add("active");
+    feedbackModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    clearAlert();
+    if (feedbackForm) {
+      feedbackForm.style.display = "block";
+      feedbackForm.reset();
+    }
+    if (feedbackSuccess) feedbackSuccess.style.display = "none";
+    updateCharCount();
+    setTimeout(() => {
+      if (feedbackText) feedbackText.focus();
+    }, 50);
+  }
+
+  function closeModal() {
+    if (!feedbackModal) return;
+    feedbackModal.classList.remove("active");
+    feedbackModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
+  if (openFeedback) openFeedback.addEventListener("click", openModal);
+  if (closeFeedback) closeFeedback.addEventListener("click", closeModal);
+  if (cancelFeedback) cancelFeedback.addEventListener("click", closeModal);
+  if (doneFeedback) doneFeedback.addEventListener("click", closeModal);
+
+  if (feedbackModal) {
+    feedbackModal.addEventListener("click", (e) => {
+      if (e.target === feedbackModal) closeModal();
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && feedbackModal && feedbackModal.classList.contains("active")) {
+      closeModal();
+    }
+  });
+
+  if (feedbackText) {
+    feedbackText.addEventListener("input", updateCharCount);
+  }
+
+  if (feedbackForm) {
+    feedbackForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      // Anti-spam honeypot check
+      const hp = feedbackForm.querySelector('input[name="_hp_site"]');
+      if (hp && hp.value.trim() !== "") {
+        // Silently act as success without calling Telegram
+        feedbackForm.style.display = "none";
+        if (feedbackSuccess) feedbackSuccess.style.display = "block";
+        return;
+      }
+
+      const message = feedbackText ? feedbackText.value.trim() : "";
+      if (!message) {
+        showAlert("Please enter your feedback before submitting.", "error");
+        if (feedbackText) feedbackText.focus();
+        return;
+      }
+
+      if (message.length > 1000) {
+        showAlert("Feedback message is too long (maximum 1000 characters).", "error");
+        return;
+      }
+
+      if (!CONFIG.FEEDBACK_ENDPOINT) {
+        showAlert("Feedback backend is not yet connected. Please configure FEEDBACK_ENDPOINT.", "error");
+        return;
+      }
+
+      const submitBtn = submitFeedback;
+      const originalHtml = submitBtn ? submitBtn.innerHTML : "";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="btn-label">Sending...</span>';
+      }
+      if (feedbackText) feedbackText.disabled = true;
+
+      try {
+        const res = await fetch(CONFIG.FEEDBACK_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data || data.error) {
+          throw new Error(data?.error || `Submission failed with status ${res.status}`);
+        }
+
+        // Success
+        feedbackForm.style.display = "none";
+        if (feedbackSuccess) feedbackSuccess.style.display = "block";
+        feedbackForm.reset();
+        updateCharCount();
+      } catch (err) {
+        console.error("Feedback submission error:", err);
+        showAlert(err.message || "Failed to deliver feedback. Please try again later.", "error");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHtml;
+        }
+        if (feedbackText) feedbackText.disabled = false;
+      }
+    });
   }
 
   load();

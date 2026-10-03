@@ -18,6 +18,10 @@
     <a class="active" href="#home">Home</a><a href="#catalog">Apps</a><a href="#catalog">Games</a><a href="#catalog">Tools</a><a href="#updates">Updates</a>
   </nav>
   <label class="top-search">⌕<input id="topSearch" placeholder="Search..." autocomplete="off" aria-label="Search"></label>
+  <a class="topbar-tg" href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" aria-label="Telegram Channel" title="Join NIK MODS Telegram">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.52 2.77-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/></svg>
+    <span>Telegram</span>
+  </a>
   <button class="menu" aria-label="Menu">☰</button>
 </header>
 
@@ -37,7 +41,7 @@
 
 <section class="catalog" id="catalog">
   <div class="section-head"><div><p class="eyebrow">DOWNLOAD CATALOG</p><h2>Find your download.</h2></div><span id="count">—</span></div>
-  <div id="sourceNote" class="source-note">Browse the latest available releases.</div>
+  <div id="sourceNote" class="source-note">Latest releases, curated for NIK MODS.</div>
   <div id="grid" class="grid"></div>
 </section>
 
@@ -47,7 +51,56 @@
 </section>
 </main>
 
-<footer><span>© <span id="year"></span> NIK MODS</span><span>Only distribute files you have the right to distribute.</span></footer>
-<script src="script.js?v=8" defer></script>
+<footer>
+  <div class="footer-left">
+    <span>© <span id="year"></span> NIK MODS</span>
+    <button type="button" class="footer-btn" id="openFeedback">Feedback</button>
+  </div>
+  <span>Only distribute files you have the right to distribute.</span>
+</footer>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="feedbackTitle">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <p class="eyebrow" style="margin-bottom:4px">NIK MODS</p>
+        <h3 id="feedbackTitle">Anonymous Feedback</h3>
+      </div>
+      <button type="button" class="modal-close" id="closeFeedback" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="feedbackForm">
+        <!-- Anti-spam honeypot -->
+        <input type="text" name="_hp_site" style="display:none!important" tabindex="-1" autocomplete="off">
+        <p class="modal-desc">Share your suggestions, app requests, or feedback. No personal information is requested or collected.</p>
+        <div class="field-wrap">
+          <textarea id="feedbackText" name="message" maxlength="1000" rows="5" placeholder="Write your message here..." required></textarea>
+          <div class="field-meta">
+            <span class="field-hint">Anonymous</span>
+            <span class="char-count" id="charCount">0 / 1000</span>
+          </div>
+        </div>
+        <div id="feedbackAlert" class="feedback-alert" aria-live="polite"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelFeedback">Cancel</button>
+          <button type="submit" class="btn-primary" id="submitFeedback">
+            <span class="btn-label">Submit</span>
+          </button>
+        </div>
+      </form>
+      <div id="feedbackSuccess" class="feedback-success-view" style="display:none">
+        <div class="feedback-success-icon">✓</div>
+        <h4>Thanks for your feedback.</h4>
+        <p class="modal-desc">Your message has been sent to the NIK MODS team.</p>
+        <div class="modal-actions" style="justify-content:center">
+          <button type="button" class="btn-primary" id="doneFeedback">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="script.js?v=9" defer></script>
 </body>
 </html>
