@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "*/15 * * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-catalog.yml"
 
 permissions:
   contents: write
@@ -12,44 +17,109 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Fetch Google Sheet
+      - name: Fetch Google Sheet CSV
         env:
-          SHEET_CSV: "https://docs.google.com/spreadsheets/d/1wDXCt_fx0EdkjHbaHwDvnoZA__5_OAWYT5sPZ1mhRiU/gviz/tq?tqx=out:csv"
+          SHEET_ID: "1wDXCt_fx0EdkjHbaHwDvnoZA__5_OAWYT5sPZ1mhRiU"
         run: |
-          curl -L --fail --silent --show-error "$SHEET_CSV" -o /tmp/catalog.csv
+          URL1="https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv"
+          URL2="https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv"
+
+          fetch_csv() {
+            local url="$1"
+            local dest="$2"
+            if curl -fL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" --connect-timeout 15 --max-time 60 --silent --show-error "$url" -o "$dest"; then
+              if [ -s "$dest" ] && ! grep -qiE '^\s*<!doctype|^\s*<html' "$dest"; then
+                return 0
+              fi
+            fi
+            return 1
+          }
+
+          if fetch_csv "$URL1" /tmp/catalog.csv; then
+            echo "Successfully fetched catalog CSV via gviz endpoint"
+          elif fetch_csv "$URL2" /tmp/catalog.csv; then
+            echo "Successfully fetched catalog CSV via export endpoint"
+          else
+            echo "Error: Failed to fetch Google Sheet CSV from both endpoints" >&2
+            exit 1
+          fi
 
       - name: Build catalog.json
         run: |
-          python - <<'PY'
-          import csv, json, pathlib
+          python3 - <<'PY'
+          import csv, json, pathlib, sys
+
           src = pathlib.Path("/tmp/catalog.csv")
           out = pathlib.Path("catalog.json")
-          with src.open("r", encoding="utf-8-sig", newline="") as f:
+
+          if not src.exists() or src.stat().st_size == 0:
+              print("ERROR: Downloaded CSV is empty", file=sys.stderr)
+              sys.exit(1)
+
+          with src.open("r", encoding="utf-8-sig", newline="", errors="replace") as f:
               rows = list(csv.DictReader(f))
-          clean = lambda v: (v or "").strip()
+
+          clean = lambda v: ("" if v is None else str(v)).strip()
+
+          def get_field(row, *aliases, default=""):
+              for alias in aliases:
+                  for k, v in row.items():
+                      if k and k.strip().lower() == alias.lower():
+                          val = clean(v)
+                          if val:
+                              return val
+              return default
+
           data = []
           for r in rows:
-              name = clean(r.get("name"))
+              name = get_field(r, "name", "app", "title", "app_name", "app name")
               if not name:
                   continue
+
+              disp_name = name.capitalize() if name.islower() else name
+              raw_cat = get_field(r, "category", "cat", "type", default="apps").lower()
+              if raw_cat in ("app", "apps", "application", "applications"):
+                  cat = "apps"
+              elif raw_cat in ("game", "games", "gaming"):
+                  cat = "games"
+              elif raw_cat in ("tool", "tools", "utility", "utilities"):
+                  cat = "tools"
+              else:
+                  cat = "apps"
+
               data.append({
-                  "name": name,
-                  "category": clean(r.get("category")) or "apps",
-                  "version": clean(r.get("version")) or "Latest",
-                  "size": clean(r.get("size")) or "—",
-                  "description": clean(r.get("description")) or "Available release",
-                  "icon": clean(r.get("icon")),
-                  "link": clean(r.get("link")),
-                  "date": clean(r.get("date")) or clean(r.get("updated"))
+                  "name": disp_name,
+                  "category": cat,
+                  "version": get_field(r, "version", "ver", "v", default="Latest"),
+                  "size": get_field(r, "size", "file_size", "filesize", default="—"),
+                  "description": get_field(r, "description", "desc", "summary", "info", default="Available release"),
+                  "icon": get_field(r, "icon", "icon_url", "logo", "image", "img", default=""),
+                  "link": get_field(r, "link", "download", "download_url", "download_link", "url", default=""),
+                  "date": get_field(r, "date", "updated", "release_date", default="")
               })
+
+          # Safety guard: prevent wiping catalog if sheet returns 0 items unexpectedly
+          if len(data) == 0:
+              if out.exists():
+                  try:
+                      existing = json.loads(out.read_text(encoding="utf-8"))
+                      if isinstance(existing, list) and len(existing) > 0:
+                          print(f"WARNING: Sheet returned 0 items. Retaining existing {len(existing)} catalog items.")
+                          sys.exit(0)
+                  except Exception:
+                      pass
+              print("No valid rows found in sheet.")
+
           out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          print(f"Synced {len(data)} catalog items")
+          print(f"Synced {len(data)} catalog items into catalog.json")
           PY
 
-      - name: Commit catalog
+      - name: Commit catalog changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -58,5 +128,5 @@ jobs:
             echo "Catalog unchanged"
           else
             git commit -m "chore: sync app catalog"
-            git push
+            git push || (git pull --rebase origin main && git push)
           fi
