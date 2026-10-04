@@ -623,29 +623,37 @@
 
             // Save the exact dynamic QR generated for this payment order.
             window.saveQrCode = async function() {
-                const qrUrl = activeOrder?.qr_url;
-                if (!qrUrl) return;
+                const orderId = activeOrder?.order_id;
+                if (!orderId) return;
 
                 if (saveQrText) saveQrText.textContent = "SAVING...";
                 if (saveQrBtn) saveQrBtn.disabled = true;
 
                 try {
-                    const response = await fetch(qrUrl, { cache: "no-store", mode: "cors" });
+                    // Same-origin-from-the-browser Worker proxy: returns the actual PNG
+                    // with attachment headers, so Android downloads it instead of opening
+                    // the QR on a new page.
+                    const downloadUrl = PAYMENT_CONFIG.WORKER_URL +
+                        "/qr?order_id=" + encodeURIComponent(orderId);
+
+                    const response = await fetch(downloadUrl, { cache: "no-store" });
                     if (!response.ok) throw new Error("QR download failed");
 
                     const blob = await response.blob();
                     const objectUrl = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = objectUrl;
-                    link.download = "NIK-MODS-QR-" + activeOrder.order_id + ".png";
+                    link.download = "NIK-MODS-QR-" + orderId + ".png";
+                    link.style.display = "none";
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-                    if (saveQrText) saveQrText.textContent = "SAVED ✓";
+
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+                    if (saveQrText) saveQrText.textContent = "DOWNLOADED ✓";
                 } catch (err) {
-                    window.open(qrUrl, "_blank", "noopener,noreferrer");
-                    if (saveQrText) saveQrText.textContent = "OPEN QR";
+                    console.error("QR save error:", err);
+                    if (saveQrText) saveQrText.textContent = "SAVE FAILED";
                 } finally {
                     setTimeout(() => {
                         if (saveQrText) saveQrText.textContent = "SAVE QR";
@@ -656,18 +664,37 @@
 
             function parseFamGatewayExpiry(value) {
                 if (!value) return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
-                const m = String(value).match(/(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})/);
-                if (!m) return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
 
-                const dd = Number(m[1]);
-                const mm = Number(m[2]);
-                const yyyy = Number(m[3]);
-                const hh = Number(m[4]);
-                const min = Number(m[5]);
-                const ss = Number(m[6]);
+                const raw = String(value).trim();
 
-                // FamGateway timestamps are explicitly IST (UTC+05:30).
-                return Date.UTC(yyyy, mm - 1, dd, hh, min, ss) - (5.5 * 60 * 60 * 1000);
+                // Unix seconds / milliseconds, if the gateway ever returns a numeric timestamp.
+                if (/^\d{10,13}$/.test(raw)) {
+                    const n = Number(raw);
+                    return n < 1e12 ? n * 1000 : n;
+                }
+
+                // ISO-8601 with an explicit timezone, e.g. 2026-10-04T10:55:00+05:30.
+                const isoMs = Date.parse(raw);
+                if (Number.isFinite(isoMs) && /T|Z|[+-]\d{2}:?\d{2}$/.test(raw)) {
+                    return isoMs;
+                }
+
+                // FamGateway IST without an explicit timezone.
+                let m = raw.match(/^(\d{4})[-/](\d{2})[-/](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+                if (m) {
+                    const yyyy = Number(m[1]), mm = Number(m[2]), dd = Number(m[3]);
+                    const hh = Number(m[4]), min = Number(m[5]), ss = Number(m[6] || 0);
+                    return Date.UTC(yyyy, mm - 1, dd, hh, min, ss) - (5.5 * 60 * 60 * 1000);
+                }
+
+                m = raw.match(/^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+                if (m) {
+                    const dd = Number(m[1]), mm = Number(m[2]), yyyy = Number(m[3]);
+                    const hh = Number(m[4]), min = Number(m[5]), ss = Number(m[6] || 0);
+                    return Date.UTC(yyyy, mm - 1, dd, hh, min, ss) - (5.5 * 60 * 60 * 1000);
+                }
+
+                return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
             }
 
             function startExpiryCountdown(expiryValue) {
@@ -708,8 +735,9 @@
             };
 
             // Status Verification Polling
-            // Primary status source is FamGateway's documented public browser-safe
-            // checkout-status endpoint. The Cloudflare Worker remains the fallback.
+            // Primary source is our Cloudflare Worker, which performs the authoritative
+            // FamGateway server-side check without exposing the API key. Direct public
+            // checkout-status is retained as a browser fallback only.
             function startStatusPolling(orderId) {
                 stopStatusPolling();
                 pollStartTime = Date.now();
@@ -724,28 +752,33 @@
 
                     let statusPayload = null;
 
+                    // 1) Authoritative Worker check.
                     try {
-                        const directUrl = PAYMENT_CONFIG.FAMGATEWAY_PUBLIC_STATUS_URL +
+                        const statusUrl = PAYMENT_CONFIG.WORKER_URL +
+                            PAYMENT_CONFIG.STATUS_PATH +
                             "?order_id=" + encodeURIComponent(orderId);
-                        const directRes = await fetch(directUrl, { cache: "no-store" });
-                        if (directRes.ok) statusPayload = await directRes.json();
+                        const res = await fetch(statusUrl, { cache: "no-store" });
+                        if (res.ok) statusPayload = await res.json();
                     } catch (e) {
-                        console.warn("Direct FamGateway status check notice:", e);
+                        console.warn("Backend status check notice:", e);
                     }
 
+                    // 2) Browser-safe FamGateway endpoint as fallback.
                     if (!statusPayload) {
                         try {
-                            const statusUrl = PAYMENT_CONFIG.WORKER_URL +
-                                PAYMENT_CONFIG.STATUS_PATH +
+                            const directUrl = PAYMENT_CONFIG.FAMGATEWAY_PUBLIC_STATUS_URL +
                                 "?order_id=" + encodeURIComponent(orderId);
-                            const res = await fetch(statusUrl, { cache: "no-store" });
-                            if (res.ok) statusPayload = await res.json();
+                            const directRes = await fetch(directUrl, { cache: "no-store" });
+                            if (directRes.ok) statusPayload = await directRes.json();
                         } catch (e) {
-                            console.warn("Backend status check notice:", e);
+                            console.warn("Direct FamGateway status check notice:", e);
                         }
                     }
 
-                    if (!statusPayload) return;
+                    if (!statusPayload) {
+                        if (pollStatusNotice) pollStatusNotice.textContent = "Rechecking payment status...";
+                        return;
+                    }
 
                     const nested = statusPayload.data || statusPayload.result || {};
                     const status = String(
@@ -770,6 +803,11 @@
                     if (["expired", "failed", "cancelled"].includes(status)) {
                         stopStatusPolling();
                         showPaymentError("Payment session expired or was not completed.");
+                        return;
+                    }
+
+                    if (pollStatusNotice) {
+                        pollStatusNotice.textContent = "Checking payment status automatically...";
                     }
                 };
 
