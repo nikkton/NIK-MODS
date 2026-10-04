@@ -1,10 +1,7 @@
-name = "nik-mods-feedback"
-main = "worker/feedback-worker.js"
+name = "nik-mods-payments"
+main = "worker/tip-payment-worker.js"
 compatibility_date = "2024-01-01"
 
-[vars]
-TELEGRAM_CHAT_ID = "1840373853"
+# DO NOT put FAMGATEWAY_API_KEY here.
+# FAMGATEWAY_API_KEY is securely configured as an encrypted Secret in Cloudflare.
 
-# DO NOT put TELEGRAM_BOT_TOKEN here.
-# TELEGRAM_BOT_TOKEN is securely configured as an encrypted Secret in Cloudflare.
-# (To rotate secret in future: npx wrangler secret put TELEGRAM_BOT_TOKEN)
