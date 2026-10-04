@@ -142,10 +142,178 @@
       version: clean(r.version) || "Latest",
       size: clean(r.size) || "—",
       description: clean(r.description) || "Available release",
-      icon: clean(r.icon) || CONFIG.DEFAULT_ICON,
+      icon: clean(r.icon),
       link: sanitizeLink(r.link),
       date: clean(r.date) || clean(r.updated) || ""
     };
+  }
+
+  // --- Intelligent App Icon Resolver & Cache ---
+  const ICON_CACHE_KEY_PREFIX = "nik_icon_v2_";
+  const iconMemoryCache = new Map();
+  const pendingIconResolutions = new Map();
+
+  function isDirectImageUrl(url) {
+    if (!url || typeof url !== "string") return false;
+    const u = url.trim();
+    if (u === "" || u === "#" || u === "none" || u === "n/a" || u === "null" || u === "nil") return false;
+    // ImgBB share page URLs (e.g. https://ibb.co/d4GwTz5M) are HTML viewer pages, NOT direct image files
+    if (/^https?:\/\/ibb\.co\/[a-zA-Z0-9]+(\/)?$/i.test(u)) return false;
+    // Reject HTML/JS schemes
+    if (u.toLowerCase().startsWith("javascript:") || u.toLowerCase().startsWith("data:text/html")) return false;
+    // Must be valid URL protocol or relative assets path
+    if (!/^(https?:\/\/|assets\/|\.\/assets\/|data:image\/)/i.test(u)) return false;
+    return true;
+  }
+
+  function cleanAppSearchName(rawName) {
+    if (!rawName) return "";
+    return String(rawName)
+      .replace(/\b(mod|apk|premium|pro|vip|ultra|hack|unlocked|plus|\+|latest|edition|v[0-9.]+|android|ios|pc)\b/gi, "")
+      .replace(/[^\w\s-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function getCachedIcon(name) {
+    const slug = clean(name).toLowerCase();
+    if (!slug) return null;
+    if (iconMemoryCache.has(slug)) return iconMemoryCache.get(slug);
+    try {
+      const cached = localStorage.getItem(ICON_CACHE_KEY_PREFIX + slug);
+      if (cached) {
+        iconMemoryCache.set(slug, cached);
+        return cached;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function setCachedIcon(name, url) {
+    const slug = clean(name).toLowerCase();
+    if (!slug) return;
+    iconMemoryCache.set(slug, url);
+    try {
+      localStorage.setItem(ICON_CACHE_KEY_PREFIX + slug, url);
+    } catch (_) {}
+  }
+
+  async function resolveAppIcon(name) {
+    const slug = clean(name).toLowerCase();
+    if (!slug) return CONFIG.DEFAULT_ICON;
+
+    const cached = getCachedIcon(name);
+    if (cached) {
+      return cached === "FALLBACK" ? CONFIG.DEFAULT_ICON : cached;
+    }
+
+    if (pendingIconResolutions.has(slug)) {
+      return pendingIconResolutions.get(slug);
+    }
+
+    const resolutionPromise = (async () => {
+      try {
+        const queryTerm = cleanAppSearchName(name) || name;
+        if (!queryTerm) {
+          setCachedIcon(name, "FALLBACK");
+          return CONFIG.DEFAULT_ICON;
+        }
+
+        const endpoint = `https://itunes.apple.com/search?term=${encodeURIComponent(queryTerm)}&entity=software&limit=1`;
+        const res = await fetch(endpoint);
+        if (!res.ok) throw new Error("Search API HTTP " + res.status);
+        const data = await res.json();
+
+        if (data && data.resultCount > 0 && Array.isArray(data.results) && data.results[0]) {
+          const item = data.results[0];
+          // Relevance check: verify search term word appears in trackName or artistName
+          const firstWord = queryTerm.toLowerCase().split(" ")[0];
+          const trackLower = (item.trackName || "").toLowerCase();
+          const artistLower = (item.artistName || "").toLowerCase();
+
+          if (trackLower.includes(firstWord) || artistLower.includes(firstWord)) {
+            const iconUrl = item.artworkUrl100 || item.artworkUrl512 || item.artworkUrl60;
+            if (iconUrl) {
+              setCachedIcon(name, iconUrl);
+              return iconUrl;
+            }
+          }
+        }
+
+        // No reliable match found: record as fallback so we don't spam network
+        setCachedIcon(name, "FALLBACK");
+        return CONFIG.DEFAULT_ICON;
+      } catch (err) {
+        console.warn("Auto-icon resolve error for " + name + ":", err.message || err);
+        return CONFIG.DEFAULT_ICON;
+      } finally {
+        pendingIconResolutions.delete(slug);
+      }
+    })();
+
+    pendingIconResolutions.set(slug, resolutionPromise);
+    return resolutionPromise;
+  }
+
+  window.handleIconError = function(img) {
+    if (!img) return;
+    if (img.dataset.errorHandled === "1") {
+      img.src = CONFIG.DEFAULT_ICON;
+      return;
+    }
+    img.dataset.errorHandled = "1";
+    const appName = img.dataset.appName || "";
+
+    resolveAppIcon(appName).then(resolvedUrl => {
+      if (resolvedUrl && resolvedUrl !== img.src && resolvedUrl !== CONFIG.DEFAULT_ICON) {
+        const preloader = new Image();
+        preloader.onload = () => {
+          img.src = resolvedUrl;
+        };
+        preloader.onerror = () => {
+          img.src = CONFIG.DEFAULT_ICON;
+        };
+        preloader.src = resolvedUrl;
+      } else {
+        img.src = CONFIG.DEFAULT_ICON;
+      }
+    }).catch(() => {
+      img.src = CONFIG.DEFAULT_ICON;
+    });
+  };
+
+  function resolveMissingCardIcons(list) {
+    if (!Array.isArray(list)) return;
+    list.forEach(a => {
+      if (!isDirectImageUrl(a.icon)) {
+        const cached = getCachedIcon(a.name);
+        if (!cached) {
+          resolveAppIcon(a.name).then(resolvedUrl => {
+            if (resolvedUrl && resolvedUrl !== CONFIG.DEFAULT_ICON) {
+              updateCardIcons(a.name, resolvedUrl);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  function updateCardIcons(appName, resolvedUrl) {
+    if (!appName || !resolvedUrl) return;
+    const imgs = document.querySelectorAll("img.app-card-icon");
+    imgs.forEach(img => {
+      if (img.dataset.appName === appName && img.src !== resolvedUrl) {
+        const preloader = new Image();
+        preloader.onload = () => {
+          img.style.opacity = "0.2";
+          setTimeout(() => {
+            img.src = resolvedUrl;
+            img.style.opacity = "1";
+          }, 120);
+        };
+        preloader.src = resolvedUrl;
+      }
+    });
   }
 
   // --- Signature Liquid GET IT Palette & Deterministic Hash ---
@@ -269,10 +437,21 @@
 
     catalogList.innerHTML = visible.map((a) => {
       const isAvailable = Boolean(a.link && a.link !== "#" && a.link.trim() !== "");
-      const iconUrl = a.icon || CONFIG.DEFAULT_ICON;
       const formattedDate = date(a.date);
       const liquidTheme = getLiquidTheme(a.name);
       const liquidStyles = `--liq-color: ${liquidTheme.color}; --liq-bright: ${liquidTheme.bright}; --liq-dark: ${liquidTheme.dark}; --liq-glow: ${liquidTheme.glow}; --liq-soft: ${liquidTheme.soft};`;
+
+      // Determine initial icon URL
+      const hasDirectIcon = isDirectImageUrl(a.icon);
+      let initialIconUrl = CONFIG.DEFAULT_ICON;
+      if (hasDirectIcon) {
+        initialIconUrl = a.icon;
+      } else {
+        const cached = getCachedIcon(a.name);
+        if (cached && cached !== "FALLBACK") {
+          initialIconUrl = cached;
+        }
+      }
 
       return `
         <div class="glass-card rounded-3xl p-6 relative overflow-hidden group" data-category="${esc(a.category)}" style="${liquidStyles}">
@@ -281,8 +460,15 @@
 
           <div class="flex items-start gap-5 relative z-10">
             <!-- Icon Box -->
-            <div class="w-14 h-14 rounded-2xl glass-ultra flex items-center justify-center shrink-0 border border-white/20 group-hover:border-white/40 transition-colors overflow-hidden p-2">
-              <img src="${esc(iconUrl)}" alt="${esc(a.name)}" class="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" loading="lazy" onerror="this.onerror=null;this.src='${CONFIG.DEFAULT_ICON}'">
+            <div class="w-14 h-14 rounded-2xl glass-ultra flex items-center justify-center shrink-0 border border-white/20 group-hover:border-white/40 transition-colors overflow-hidden p-2 relative bg-black/40">
+              <img 
+                src="${esc(initialIconUrl)}" 
+                alt="${esc(a.name)}" 
+                data-app-name="${esc(a.name)}" 
+                class="app-card-icon w-full h-full object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] transition-opacity duration-300" 
+                loading="lazy" 
+                onerror="window.handleIconError(this)"
+              >
             </div>
 
             <!-- Info -->
@@ -366,6 +552,9 @@
         </div>
       `;
     }).join("");
+
+    // Automatically resolve missing / unverified icons in background
+    resolveMissingCardIcons(visible);
 
     if (window.gsap) {
       gsap.fromTo("#catalogList .glass-card",
