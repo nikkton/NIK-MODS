@@ -219,12 +219,18 @@
             <span class="text-xs text-white/60 leading-relaxed">${esc(a.description)}</span>
           </div>
 
-          <!-- Action Button: only render when a real download link exists -->
+          <!-- NIK MODS GET IT toggle -->
           ${isAvailable ? `
           <div class="mt-5 relative z-10">
-            <a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" class="w-full block bg-white/10 hover:bg-brand-accent text-white py-3 rounded-xl text-xs font-bold text-center tracking-widest uppercase transition-all duration-300 chasing-border shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,0,60,0.4)]">
-              <i class="fa-solid fa-arrow-down mr-1.5 text-xs"></i> Continue to download
-            </a>
+            <button
+              type="button"
+              class="get-it-toggle"
+              data-download-url="${esc(a.link)}"
+              aria-label="Get ${esc(a.name)}"
+            >
+              <span class="get-it-label">GET IT</span>
+              <span class="get-it-orb"><i class="fa-solid fa-arrow-right"></i></span>
+            </button>
           </div>` : ""}
 
           <!-- Footer Action & Meta -->
@@ -248,6 +254,28 @@
       );
     }
   }
+
+  // --- Signature GET IT toggle ------------------------------------------------
+  // Click -> locks into a loading state for 3s -> redirects to the ShrinkMe URL.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".get-it-toggle");
+    if (!btn || btn.dataset.busy === "1") return;
+
+    const url = btn.dataset.downloadUrl;
+    if (!url || url === "#") return;
+
+    btn.dataset.busy = "1";
+    btn.classList.add("is-loading");
+
+    const label = btn.querySelector(".get-it-label");
+    const orb = btn.querySelector(".get-it-orb");
+    if (label) label.textContent = "PREPARING";
+    if (orb) orb.innerHTML = '<i class="fa-solid fa-circle-notch"></i>';
+
+    setTimeout(() => {
+      window.location.href = url;
+    }, 3000);
+  });
 
   function setFilter(newFilter) {
     currentFilter = (newFilter || "all").toLowerCase();
