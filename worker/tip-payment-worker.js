@@ -189,14 +189,70 @@ async function checkPaymentStatus(url, env) {
     }
   }
 
-  // 2. Query FamGateway API with API Key in query parameter
-  const apiKey = env?.FAMGATEWAY_API_KEY;
-  try {
-    const verifyUrl = apiKey
-      ? `https://famgateway.in/api/verify-order.php?order_id=${encodeURIComponent(orderId)}&api_key=${encodeURIComponent(apiKey)}`
-      : `https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`;
+  // 2. Check FamGateway's public checkout status first. This is the same
+  // status source used by their hosted checkout and is ideal for the website.
+  // Then fall back to authoritative server-to-server verification.
+  const publicStatusUrl =
+    `https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`;
 
-    const famRes = await fetch(verifyUrl);
+  try {
+    const pubRes = await fetch(publicStatusUrl, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+    if (pubRes.ok) {
+      const pubData = await pubRes.json();
+      const pubNested = pubData?.data || pubData?.result || {};
+      const pubStatus = String(
+        pubData?.status ?? pubNested?.status ?? pubData?.state ?? pubNested?.state ?? ""
+      ).toLowerCase();
+
+      const isVerified =
+        pubData?.verified === true ||
+        pubNested?.verified === true ||
+        ["success", "paid", "completed"].includes(pubStatus);
+
+      const isExpired = ["expired", "failed", "cancelled"].includes(pubStatus);
+
+      if (isVerified || isExpired) {
+        return json({
+          ok: true,
+          order_id: orderId,
+          verified: isVerified,
+          status: isVerified ? "SUCCESS" : "EXPIRED",
+          data: pubData
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Public FamGateway status check failed:", e?.message || e);
+  }
+
+  // 3. Authoritative server-to-server check with the API key kept in the
+  // Worker secret. Use the documented X-Api-Key header instead of putting
+  // the secret in the URL.
+  const apiKey = env?.FAMGATEWAY_API_KEY;
+  if (!apiKey) {
+    return json({
+      ok: true,
+      order_id: orderId,
+      verified: false,
+      status: "PENDING",
+      error: "Payment verification secret is not configured"
+    }, 200);
+  }
+
+  try {
+    const verifyUrl =
+      `https://famgateway.in/api/verify-order.php?order_id=${encodeURIComponent(orderId)}`;
+
+    const famRes = await fetch(verifyUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "X-Api-Key": apiKey
+      }
+    });
     const data = await famRes.json();
     const nested = data?.data || data?.result || {};
     const normalizedStatus = String(
@@ -218,38 +274,13 @@ async function checkPaymentStatus(url, env) {
       data
     });
   } catch (err) {
-    // Fallback to public checkout-status endpoint if verify-order encounters network error
-    try {
-      const pubRes = await fetch(`https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`);
-      const pubData = await pubRes.json();
-      const pubNested = pubData?.data || pubData?.result || {};
-      const pubStatus = String(
-        pubData?.status ?? pubNested?.status ?? pubData?.state ?? pubNested?.state ?? ""
-      ).toLowerCase();
-
-      const isVerified =
-        pubData?.verified === true ||
-        pubNested?.verified === true ||
-        ["success", "paid", "completed"].includes(pubStatus);
-
-      const isExpired = ["expired", "failed", "cancelled"].includes(pubStatus);
-
-      return json({
-        ok: true,
-        order_id: orderId,
-        verified: isVerified,
-        status: isVerified ? "SUCCESS" : (isExpired ? "EXPIRED" : "PENDING"),
-        data: pubData
-      });
-    } catch {
-      return json({
-        ok: false,
-        order_id: orderId,
-        verified: false,
-        status: "PENDING",
-        error: "Status check currently unavailable"
-      }, 200);
-    }
+    return json({
+      ok: true,
+      order_id: orderId,
+      verified: false,
+      status: "PENDING",
+      error: "Status check currently unavailable"
+    }, 200);
   }
 }
 
@@ -277,7 +308,39 @@ export default {
       return checkPaymentStatus(url, env);
     }
 
-    // 5. Webhook
+    // 5. QR download proxy. FamGateway's QR image endpoint is public-safe;
+    // proxying it here lets Android download the PNG without opening a new tab
+    // or depending on third-party CORS headers.
+    if (request.method === "GET" && (url.pathname === "/qr" || url.pathname.endsWith("/qr"))) {
+      const orderId = url.searchParams.get("order_id") || url.searchParams.get("orderId");
+      if (!orderId) return json({ ok: false, error: "Missing order_id" }, 400);
+
+      try {
+        const qrRes = await fetch(
+          `https://famgateway.in/api/qr-image.php?order_id=${encodeURIComponent(orderId)}`,
+          { headers: { "Accept": "image/png,image/*" } }
+        );
+
+        if (!qrRes.ok) {
+          return json({ ok: false, error: "QR image unavailable" }, qrRes.status);
+        }
+
+        const headers = new Headers(qrRes.headers);
+        headers.set("Content-Type", qrRes.headers.get("Content-Type") || "image/png");
+        headers.set(
+          "Content-Disposition",
+          `attachment; filename="NIK-MODS-QR-${orderId}.png"`
+        );
+        headers.set("Cache-Control", "no-store");
+        Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
+
+        return new Response(qrRes.body, { status: 200, headers });
+      } catch (e) {
+        return json({ ok: false, error: "QR download service unavailable" }, 502);
+      }
+    }
+
+    // 6. Webhook
     if (request.method === "POST" && (url.pathname === "/webhook" || url.pathname.endsWith("/webhook"))) {
       return handlePaymentWebhook(request, env);
     }
