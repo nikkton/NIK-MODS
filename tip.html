@@ -246,8 +246,29 @@
                     </button>
                 </div>
 
-                <!-- Dynamic QR View -->
-                <div id="qrSection" class="w-full mb-4 flex flex-col items-center">
+                <!-- Action Buttons: Primary is PAY WITH UPI APP -->
+                <div class="w-full flex flex-col gap-2.5 mb-2">
+                    <!-- UPI Intent Button (Primary on Android/Mobile) -->
+                    <a id="payWithUpiIntentBtn" href="#" onclick="triggerUpiIntent(event)" class="w-full bg-brand-accent hover:bg-[#e00035] text-white py-3.5 rounded-xl text-xs sm:text-sm font-bold tracking-wider transition-all flex items-center justify-center gap-2 chasing-border active:scale-95 text-center shadow-[0_0_25px_rgba(255,0,60,0.3)]">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>PAY WITH UPI APP</span>
+                    </a>
+
+                    <!-- Toggle QR Button (Separate Fallback) -->
+                    <button type="button" id="toggleQrBtn" onclick="toggleQrVisibility()" class="w-full glass-card border border-white/10 text-white/80 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
+                        <i class="fa-solid fa-qrcode text-brand-accent"></i>
+                        <span id="toggleQrText">SHOW QR CODE</span>
+                    </button>
+
+                    <!-- Open Secure Checkout (Separate Fallback) -->
+                    <a id="openCheckoutLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full glass-card border border-white/10 text-white/60 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        <span>OPEN SECURE CHECKOUT</span>
+                    </a>
+                </div>
+
+                <!-- Dynamic QR View (Hidden by default, separate fallback) -->
+                <div id="qrSection" class="w-full mt-3 mb-2 flex flex-col items-center hidden transition-all duration-300">
                     <div class="w-48 h-48 rounded-2xl bg-white p-2.5 shadow-[0_0_30px_rgba(255,255,255,0.15)] flex items-center justify-center relative overflow-hidden border border-white/20">
                         <img id="dynamicQrImage" src="" alt="UPI Payment QR Code" class="w-full h-full object-contain" />
                         <!-- QR Skeleton while loading image -->
@@ -256,28 +277,7 @@
                             <span class="text-[10px] font-mono text-slate-500">Loading dynamic QR...</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono text-white/40 mt-2">Scan with GPay, PhonePe, Paytm, or BHIM</span>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="w-full flex flex-col gap-2.5">
-                    <!-- UPI Intent Button (Primary on Android/Mobile) -->
-                    <button type="button" id="payWithUpiIntentBtn" onclick="triggerUpiIntent()" class="w-full bg-brand-accent hover:bg-[#e00035] text-white py-3.5 rounded-xl text-xs font-bold tracking-wider transition-all flex items-center justify-center gap-2 chasing-border active:scale-95">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>PAY WITH UPI APP</span>
-                    </button>
-
-                    <!-- Toggle QR Button -->
-                    <button type="button" id="toggleQrBtn" onclick="toggleQrVisibility()" class="w-full glass-card border border-white/10 text-white/80 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
-                        <i class="fa-solid fa-qrcode text-brand-accent"></i>
-                        <span id="toggleQrText">HIDE QR CODE</span>
-                    </button>
-
-                    <!-- Open Secure Checkout (Fallback) -->
-                    <a id="openCheckoutLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full glass-card border border-white/10 text-white/60 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
-                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                        <span>OPEN SECURE CHECKOUT</span>
-                    </a>
+                    <span class="text-[10px] font-mono text-white/40 mt-2">Scan with another device or camera</span>
                 </div>
 
                 <!-- Live Polling Notice -->
@@ -599,9 +599,12 @@
                 modalAmountDisplay.textContent = `₹${Number(order.amount).toLocaleString("en-IN")}`;
                 modalOrderId.textContent = order.order_id;
 
-                // QR Code
+                // Dynamic QR Code preloading (Separate Fallback, hidden by default)
+                isQrHidden = true;
+                if (qrSection) qrSection.classList.add("hidden");
+                if (toggleQrText) toggleQrText.textContent = "SHOW QR CODE";
+
                 if (order.qr_url && dynamicQrImage) {
-                    qrSection.classList.remove("hidden");
                     qrLoadingSkeleton.classList.remove("hidden");
                     dynamicQrImage.onload = () => {
                         qrLoadingSkeleton.classList.add("hidden");
@@ -610,18 +613,18 @@
                         qrLoadingSkeleton.classList.add("hidden");
                     };
                     dynamicQrImage.src = order.qr_url;
-                } else {
-                    if (qrSection) qrSection.classList.add("hidden");
                 }
 
-                // UPI Intent Button
+                // UPI Intent Button (Primary on Android/Mobile)
                 if (order.upi_intent && payWithUpiIntentBtn) {
+                    payWithUpiIntentBtn.href = order.upi_intent;
                     payWithUpiIntentBtn.classList.remove("hidden");
+                    payWithUpiIntentBtn.classList.add("flex");
                 } else {
                     if (payWithUpiIntentBtn) payWithUpiIntentBtn.classList.add("hidden");
                 }
 
-                // Hosted Checkout Link
+                // Hosted Checkout Link (Separate Fallback)
                 if (order.checkout_url && openCheckoutLink) {
                     openCheckoutLink.href = order.checkout_url;
                     openCheckoutLink.classList.remove("hidden");
@@ -638,28 +641,31 @@
                     paymentModal.classList.remove("opacity-0");
                     paymentModalCard.classList.remove("scale-95");
                 });
-
-                // Auto-trigger UPI app on Android / mobile devices if upi_intent available
-                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                if (isMobile && order.upi_intent) {
-                    setTimeout(() => {
-                        triggerUpiIntent();
-                    }, 400);
-                }
             }
 
-            // UPI Intent Trigger
-            window.triggerUpiIntent = function() {
-                if (!activeOrder?.upi_intent) return;
+            // Standard UPI Intent Trigger
+            // Launches exact standard upi://pay URI returned by FamGateway (app-to-app, no gallery QR)
+            window.triggerUpiIntent = function(e) {
+                if (!activeOrder?.upi_intent) {
+                    if (e) e.preventDefault();
+                    return;
+                }
+                const upiUri = activeOrder.upi_intent;
+
+                if (payWithUpiIntentBtn) {
+                    payWithUpiIntentBtn.href = upiUri;
+                }
+
                 try {
-                    window.location.href = activeOrder.upi_intent;
-                } catch (e) {
-                    console.error("UPI launch error:", e);
+                    window.location.href = upiUri;
+                    if (e) e.preventDefault();
+                } catch (err) {
+                    console.warn("Direct intent launch notice:", err);
                 }
             };
 
-            // Toggle QR Visibility
-            let isQrHidden = false;
+            // Toggle QR Visibility (Separate Fallback)
+            let isQrHidden = true;
             window.toggleQrVisibility = function() {
                 if (!qrSection) return;
                 isQrHidden = !isQrHidden;
