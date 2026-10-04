@@ -149,3 +149,27 @@ html {
     0% { left: -100%; }
     100% { left: 200%; }
 }
+
+/* Coffee Animations & Tip Button Styles */
+@keyframes float-cup {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes steam-rise {
+    0% { transform: translateY(0) scale(1) translateX(0); opacity: 0.6; }
+    50% { transform: translateY(-15px) scale(1.2) translateX(3px); opacity: 0.3; }
+    100% { transform: translateY(-30px) scale(1.5) translateX(-3px); opacity: 0; }
+}
+
+.steam-1 { animation: steam-rise 2.5s infinite ease-in; }
+.steam-2 { animation: steam-rise 2.5s infinite ease-in 0.8s; }
+.steam-3 { animation: steam-rise 2.5s infinite ease-in 1.6s; }
+
+.tip-amount-btn.active {
+    background: rgba(255, 0, 60, 0.15) !important;
+    border-color: #ff003c !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 20px rgba(255, 0, 60, 0.25) !important;
+}
+

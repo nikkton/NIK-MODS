@@ -7,7 +7,17 @@
   const CONFIG = {
     CATALOG_URL: "catalog.json",
     DEFAULT_ICON: "assets/nik-logo.svg",
-    FEEDBACK_ENDPOINT: "https://nik-mods-feedback.godrp3236.workers.dev"
+    FEEDBACK_ENDPOINT: "https://nik-mods-feedback.godrp3236.workers.dev",
+    
+    // Single Source of Truth for UPI ID
+    // Configured once here; never hardcoded across multiple places.
+    UPI_ID: "nikmods@upi",
+
+    // Payment Integration Layer Configuration
+    // Set PAYMENT_GATEWAY_ENABLED to true once real provider (e.g. UroPay / worker) is deployed
+    PAYMENT_GATEWAY_ENABLED: false,
+    PAYMENT_ORDER_ENDPOINT: "", // e.g. "https://nik-mods-feedback.godrp3236.workers.dev/api/tip/order"
+    PAYMENT_STATUS_ENDPOINT: "" // e.g. "https://nik-mods-feedback.godrp3236.workers.dev/api/tip/status"
   };
 
   const $ = s => document.querySelector(s);
@@ -44,6 +54,33 @@
   const pBar0 = $("#progress0");
   const pBar1 = $("#progress1");
 
+  // Tip Me a Coffee Page Elements
+  const tipOverlay = $("#tipOverlay");
+  const tipBtns = $$(".tip-amount-btn");
+  const customTipInput = $("#customTipInput");
+  const tipSelectedAmountDisplay = $("#tipSelectedAmountDisplay");
+  const upiIdText = $("#upiIdText");
+  const copyUpiBtn = $("#copyUpiBtn");
+  const copyUpiIcon = $("#copyUpiIcon");
+  const copyUpiText = $("#copyUpiText");
+  const tipQrImage = $("#tipQrImage");
+  const tipQrPlaceholder = $("#tipQrPlaceholder");
+  const payWithUpiBtn = $("#payWithUpiBtn");
+  const payBtnText = $("#payBtnText");
+
+  // Payment Verification & Modal Elements
+  const paymentModal = $("#paymentModal");
+  const payModalContent = $("#payModalContent");
+  const payLoadingState = $("#payLoadingState");
+  const payUnconnectedState = $("#payUnconnectedState");
+  const modalUpiDisplay = $("#modalUpiDisplay");
+  const payReadyState = $("#payReadyState");
+  const modalQrImage = $("#modalQrImage");
+  const modalUpiIntentBtn = $("#modalUpiIntentBtn");
+  const paySuccessState = $("#paySuccessState");
+  const payErrorState = $("#payErrorState");
+  const payErrorMessage = $("#payErrorMessage");
+
   // State
   let items = [];
   let currentFilter = "all";
@@ -53,6 +90,14 @@
   let isAutoScrolling = true;
   let scrollSpeed = 0.4;
   let scrollTimeout = null;
+
+  // Tip State
+  let currentTipAmount = 20;
+  let isTipPageOpen = false;
+  let isPaymentProcessing = false;
+  let activePaymentOrderId = null;
+  let paymentStatusPollInterval = null;
+
 
   // Utilities
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -572,7 +617,11 @@
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (feedbackModal && !feedbackModal.classList.contains("hidden")) {
+      if (paymentModal && !paymentModal.classList.contains("hidden")) {
+        closePaymentModal();
+      } else if (isTipPageOpen) {
+        closeTipPage();
+      } else if (feedbackModal && !feedbackModal.classList.contains("hidden")) {
         toggleFeedback();
       } else if (isNavOpen) {
         toggleNav();
@@ -656,6 +705,490 @@
     }, 1200);
   }
 
+  // =========================================================================
+  // TIP ME A COFFEE — PAYMENT INTEGRATION ARCHITECTURE & UI LOGIC
+  // =========================================================================
+
+  /**
+   * Clipboard Helper with cross-browser fallback
+   */
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) resolve();
+        else reject(new Error("Copy command failed"));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  /**
+   * TipPaymentService
+   * 
+   * Robust Payment Integration Interface prepared for legitimate providers (e.g. UroPay).
+   * 
+   * Expected Future Flow:
+   * 1. NIK MODS Tip Page creates payment order via createPaymentOrder() on backend
+   * 2. Backend Cloudflare Worker forwards request to provider (using backend secret UROPAY_API_KEY)
+   * 3. Provider returns real order (orderId, UPI Intent deep-link, and QR code)
+   * 4. User scans QR or taps "Open in UPI App" (GPay / PhonePe / Paytm / BHIM)
+   * 5. User completes payment in bank app
+   * 6. Provider verifies payment on NPCI / banking network
+   * 7. Provider sends cryptographically signed webhook to Cloudflare Worker
+   * 8. Worker verifies webhook signature (using UROPAY_WEBHOOK_SECRET) and stores verified status
+   * 9. Frontend checkPaymentStatus(orderId) polls and receives { verified: true }
+   * 10. Only then does the UI transition to "Tip Sent!"
+   * 
+   * SECURITY GUARANTEES:
+   * - ZERO API keys, merchant secrets, or webhook secrets in frontend client code.
+   * - No fake 2.5s timer or automatic success claims.
+   * - Success is unreachable without verified backend cryptographic confirmation.
+   */
+  const TipPaymentService = {
+    /**
+     * Interface 1: createPaymentOrder()
+     * Requests the backend worker to create a new verified payment order with the payment provider.
+     * 
+     * @param {Object} params
+     * @param {number} params.amount - Tip amount in INR
+     * @param {string} [params.note] - Optional transaction reference note
+     * @returns {Promise<{ status: string, orderId?: string, upiIntentUrl?: string, qrImageUrl?: string, message?: string }>}
+     */
+    async createPaymentOrder({ amount, note = "Support NIK MODS" }) {
+      if (!CONFIG.PAYMENT_GATEWAY_ENABLED || !CONFIG.PAYMENT_ORDER_ENDPOINT) {
+        // Provider gateway is not connected yet.
+        // Return clear UNCONFIGURED status instead of throwing or faking success.
+        return {
+          status: "UNCONFIGURED",
+          message: "Payment gateway is currently being connected."
+        };
+      }
+
+      const res = await fetch(CONFIG.PAYMENT_ORDER_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          note,
+          currency: "INR"
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || `Order creation failed with status ${res.status}`);
+      }
+
+      return await res.json();
+    },
+
+    /**
+     * Interface 2: openUPIPayment()
+     * Initiates UPI Intent deep-link on mobile devices (Android / iOS).
+     * Automatically targets installed UPI applications.
+     * 
+     * @param {string} upiIntentUrl - Standard UPI URL e.g. upi://pay?pa=...&pn=...&am=...
+     * @returns {boolean}
+     */
+    openUPIPayment(upiIntentUrl) {
+      if (!upiIntentUrl) return false;
+      try {
+        window.location.href = upiIntentUrl;
+        return true;
+      } catch (e) {
+        console.error("Failed to launch UPI Intent:", e);
+        return false;
+      }
+    },
+
+    /**
+     * Interface 3: checkPaymentStatus()
+     * Checks verified payment status with backend.
+     * NEVER trusts client frontend alone; status is verified against backend database/KV.
+     * 
+     * @param {string} orderId - Unique order ID
+     * @returns {Promise<{ verified: boolean, status: string }>}
+     */
+    async checkPaymentStatus(orderId) {
+      if (!CONFIG.PAYMENT_GATEWAY_ENABLED || !CONFIG.PAYMENT_STATUS_ENDPOINT) {
+        return { verified: false, status: "UNCONFIGURED" };
+      }
+
+      const res = await fetch(`${CONFIG.PAYMENT_STATUS_ENDPOINT}?orderId=${encodeURIComponent(orderId)}`, {
+        cache: "no-store"
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to check payment status (${res.status})`);
+      }
+
+      return await res.json();
+    },
+
+    /**
+     * Interface 4: handlePaymentWebhook()
+     * Placeholder reference for backend webhook processing.
+     * Implementation is housed in worker/tip-payment-worker.js.
+     * 
+     * @param {Object} payload
+     * @param {string} signature
+     */
+    handlePaymentWebhook(payload, signature) {
+      // Backend handles cryptographic verification via Cloudflare Worker secrets.
+      return { handledOnBackend: true };
+    }
+  };
+
+  /**
+   * Opens the dedicated Tip Me a Coffee page/overlay
+   */
+  function openTipPage() {
+    if (isNavOpen) toggleNav();
+
+    if (tipOverlay) {
+      tipOverlay.classList.remove("hidden");
+      tipOverlay.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      isTipPageOpen = true;
+
+      // Update configured UPI ID from single CONFIG source
+      if (upiIdText) upiIdText.textContent = CONFIG.UPI_ID;
+      if (modalUpiDisplay) modalUpiDisplay.textContent = CONFIG.UPI_ID;
+
+      requestAnimationFrame(() => {
+        tipOverlay.classList.remove("opacity-0", "translate-y-10");
+      });
+    }
+  }
+  window.openTipPage = openTipPage;
+
+  /**
+   * Closes the Tip Me a Coffee page/overlay
+   */
+  function closeTipPage(fromSuccess = false) {
+    if (fromSuccess) {
+      closePaymentModal();
+    }
+
+    if (tipOverlay) {
+      tipOverlay.classList.add("opacity-0", "translate-y-10");
+      tipOverlay.setAttribute("aria-hidden", "true");
+      isTipPageOpen = false;
+
+      setTimeout(() => {
+        tipOverlay.classList.add("hidden");
+        document.body.style.overflow = "";
+      }, 450);
+    }
+  }
+  window.closeTipPage = closeTipPage;
+
+  /**
+   * Handles preset tip button selection (₹20, ₹50, ₹100, ₹200)
+   */
+  function selectTipAmount(amount, clickedBtn) {
+    const num = Number(amount);
+    if (Number.isNaN(num) || num <= 0) return;
+
+    currentTipAmount = num;
+
+    // Clear custom input when preset is clicked
+    if (customTipInput) customTipInput.value = "";
+
+    // Update active button styling
+    tipBtns.forEach(btn => {
+      const isTarget = clickedBtn ? btn === clickedBtn : btn.textContent.includes(String(num));
+      btn.classList.toggle("active", isTarget);
+      btn.classList.toggle("chasing-border", isTarget);
+      btn.classList.toggle("text-white", isTarget);
+      btn.classList.toggle("text-white/70", !isTarget);
+    });
+
+    // Update display amounts
+    if (tipSelectedAmountDisplay) {
+      tipSelectedAmountDisplay.textContent = `₹${num.toLocaleString("en-IN")}`;
+    }
+    if (payBtnText) {
+      payBtnText.innerHTML = `<i class="fa-solid fa-bolt"></i> PAY ₹${num.toLocaleString("en-IN")} VIA UPI`;
+    }
+    if (payWithUpiBtn) {
+      payWithUpiBtn.disabled = false;
+      payWithUpiBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+  }
+  window.selectTipAmount = selectTipAmount;
+
+  /**
+   * Handles custom tip amount input with validation
+   */
+  function handleCustomTipInput() {
+    if (!customTipInput) return;
+    const rawVal = customTipInput.value.trim();
+
+    // If cleared, revert to default preset (₹20)
+    if (!rawVal) {
+      selectTipAmount(20);
+      return;
+    }
+
+    // Unselect all preset buttons when custom amount is entered
+    tipBtns.forEach(btn => {
+      btn.classList.remove("active", "chasing-border");
+      btn.classList.add("text-white/70");
+      btn.classList.remove("text-white");
+    });
+
+    const parsed = Math.floor(Number(rawVal));
+
+    if (Number.isNaN(parsed) || parsed < 1) {
+      currentTipAmount = 0;
+      if (tipSelectedAmountDisplay) tipSelectedAmountDisplay.textContent = "Invalid (Min ₹1)";
+      if (payBtnText) payBtnText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ENTER VALID AMOUNT';
+      if (payWithUpiBtn) {
+        payWithUpiBtn.disabled = true;
+        payWithUpiBtn.classList.add("opacity-50", "cursor-not-allowed");
+      }
+    } else if (parsed > 100000) {
+      currentTipAmount = 0;
+      if (tipSelectedAmountDisplay) tipSelectedAmountDisplay.textContent = "Max ₹1,00,000";
+      if (payBtnText) payBtnText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> AMOUNT EXCEEDED';
+      if (payWithUpiBtn) {
+        payWithUpiBtn.disabled = true;
+        payWithUpiBtn.classList.add("opacity-50", "cursor-not-allowed");
+      }
+    } else {
+      currentTipAmount = parsed;
+      if (tipSelectedAmountDisplay) {
+        tipSelectedAmountDisplay.textContent = `₹${parsed.toLocaleString("en-IN")}`;
+      }
+      if (payBtnText) {
+        payBtnText.innerHTML = `<i class="fa-solid fa-bolt"></i> PAY ₹${parsed.toLocaleString("en-IN")} VIA UPI`;
+      }
+      if (payWithUpiBtn) {
+        payWithUpiBtn.disabled = false;
+        payWithUpiBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+    }
+  }
+  window.handleCustomTipInput = handleCustomTipInput;
+
+  /**
+   * Copies configured UPI ID to clipboard with visual confirmation
+   */
+  function copyUPI() {
+    const upiId = CONFIG.UPI_ID;
+
+    const showCopiedFeedback = () => {
+      if (copyUpiIcon) copyUpiIcon.className = "fa-solid fa-check text-emerald-400 text-xs";
+      if (copyUpiText) {
+        copyUpiText.textContent = "COPIED";
+        copyUpiText.classList.add("text-emerald-400");
+      }
+      setTimeout(() => {
+        if (copyUpiIcon) copyUpiIcon.className = "fa-regular fa-copy text-xs";
+        if (copyUpiText) {
+          copyUpiText.textContent = "COPY";
+          copyUpiText.classList.remove("text-emerald-400");
+        }
+      }, 2000);
+    };
+
+    copyTextToClipboard(upiId)
+      .then(showCopiedFeedback)
+      .catch(() => showCopiedFeedback());
+  }
+  window.copyUPI = copyUPI;
+
+  /**
+   * Initiates payment order creation and modal flow.
+   * REMOVED fake 2.5s timer that automatically claimed "Tip Sent".
+   * Unconnected gateway shows honest setup state.
+   */
+  async function processPayment() {
+    if (isPaymentProcessing) return; // Prevent duplicate requests
+
+    if (!currentTipAmount || currentTipAmount < 1) {
+      if (customTipInput) customTipInput.focus();
+      return;
+    }
+
+    isPaymentProcessing = true;
+
+    // Open Payment Modal
+    if (paymentModal && payModalContent) {
+      paymentModal.classList.remove("hidden");
+      paymentModal.setAttribute("aria-hidden", "false");
+
+      // Show Loading State, Hide others
+      if (payLoadingState) payLoadingState.classList.remove("hidden");
+      if (payUnconnectedState) {
+        payUnconnectedState.classList.add("hidden");
+        payUnconnectedState.classList.remove("flex");
+      }
+      if (payReadyState) {
+        payReadyState.classList.add("hidden");
+        payReadyState.classList.remove("flex");
+      }
+      if (paySuccessState) {
+        paySuccessState.classList.add("hidden");
+        paySuccessState.classList.remove("flex");
+      }
+      if (payErrorState) {
+        payErrorState.classList.add("hidden");
+        payErrorState.classList.remove("flex");
+      }
+
+      requestAnimationFrame(() => {
+        paymentModal.classList.remove("opacity-0");
+        payModalContent.classList.remove("scale-95");
+      });
+    }
+
+    try {
+      const order = await TipPaymentService.createPaymentOrder({
+        amount: currentTipAmount,
+        note: `Tip of ₹${currentTipAmount} for NIK MODS`
+      });
+
+      if (order.status === "UNCONFIGURED") {
+        // Gateway not connected yet. Show honest notice (no fake success).
+        if (payLoadingState) payLoadingState.classList.add("hidden");
+        if (payUnconnectedState) {
+          payUnconnectedState.classList.remove("hidden");
+          payUnconnectedState.classList.add("flex");
+        }
+        if (modalUpiDisplay) modalUpiDisplay.textContent = CONFIG.UPI_ID;
+        isPaymentProcessing = false;
+        return;
+      }
+
+      if (order.orderId) {
+        activePaymentOrderId = order.orderId;
+        if (payLoadingState) payLoadingState.classList.add("hidden");
+        if (payReadyState) {
+          payReadyState.classList.remove("hidden");
+          payReadyState.classList.add("flex");
+        }
+
+        // Set real QR Image if provided
+        if (order.qrImageUrl && modalQrImage) {
+          modalQrImage.src = order.qrImageUrl;
+        }
+
+        // Setup Intent button if provided
+        if (order.upiIntentUrl && modalUpiIntentBtn) {
+          modalUpiIntentBtn.href = order.upiIntentUrl;
+          modalUpiIntentBtn.onclick = (e) => {
+            e.preventDefault();
+            TipPaymentService.openUPIPayment(order.upiIntentUrl);
+          };
+        }
+
+        // Start polling for real verified confirmation
+        startPaymentStatusPolling(order.orderId);
+      }
+    } catch (err) {
+      console.error("Payment initiation error:", err);
+      if (payLoadingState) payLoadingState.classList.add("hidden");
+      if (payErrorState) {
+        payErrorState.classList.remove("hidden");
+        payErrorState.classList.add("flex");
+      }
+      if (payErrorMessage) {
+        payErrorMessage.textContent = err.message || "Failed to initialize payment gateway.";
+      }
+      isPaymentProcessing = false;
+    }
+  }
+  window.processPayment = processPayment;
+
+  /**
+   * Closes payment processing modal and cleans up polling
+   */
+  function closePaymentModal() {
+    if (paymentStatusPollInterval) {
+      clearInterval(paymentStatusPollInterval);
+      paymentStatusPollInterval = null;
+    }
+
+    isPaymentProcessing = false;
+
+    if (paymentModal && payModalContent) {
+      paymentModal.classList.add("opacity-0");
+      payModalContent.classList.add("scale-95");
+      paymentModal.setAttribute("aria-hidden", "true");
+
+      setTimeout(() => {
+        paymentModal.classList.add("hidden");
+      }, 300);
+    }
+  }
+  window.closePaymentModal = closePaymentModal;
+
+  /**
+   * Polls backend for cryptographic verification of payment webhook
+   */
+  function startPaymentStatusPolling(orderId) {
+    if (paymentStatusPollInterval) clearInterval(paymentStatusPollInterval);
+
+    let attempts = 0;
+    const maxAttempts = 80; // ~4 minutes polling
+
+    paymentStatusPollInterval = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(paymentStatusPollInterval);
+        paymentStatusPollInterval = null;
+        isPaymentProcessing = false;
+        return;
+      }
+
+      try {
+        const res = await TipPaymentService.checkPaymentStatus(orderId);
+        if (res && res.verified === true) {
+          clearInterval(paymentStatusPollInterval);
+          paymentStatusPollInterval = null;
+          isPaymentProcessing = false;
+
+          // Transition to Verified Success State
+          if (payLoadingState) payLoadingState.classList.add("hidden");
+          if (payReadyState) payReadyState.classList.add("hidden");
+          if (paySuccessState) {
+            paySuccessState.classList.remove("hidden");
+            paySuccessState.classList.add("flex");
+          }
+        }
+      } catch (e) {
+        console.warn("Status check attempt error:", e);
+      }
+    }, 3000);
+  }
+
+  // Backdrop click listener for payment modal
+  if (paymentModal) {
+    paymentModal.addEventListener("click", (e) => {
+      if (e.target === paymentModal) closePaymentModal();
+    });
+  }
+
+  // Expose services
+  window.TipPaymentService = TipPaymentService;
+
+
   // --- Ambient Particles ---
   if (particlesContainer) {
     for (let i = 0; i < 28; i++) {
@@ -707,6 +1240,11 @@
   } else {
     goToSlide(0);
   }
+
+  // Initial Tip Setup
+  if (upiIdText) upiIdText.textContent = CONFIG.UPI_ID;
+  if (modalUpiDisplay) modalUpiDisplay.textContent = CONFIG.UPI_ID;
+  selectTipAmount(20);
 
   // Initial Load
   load();
