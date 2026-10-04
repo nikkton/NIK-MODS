@@ -454,20 +454,46 @@
   }
   window.navFilter = navFilter;
 
-  async function load() {
+  // --- Catalog Refresh Core (Cache-Busting & State Preservation) ---
+  let isCatalogRefreshing = false;
+
+  async function performCatalogRefresh(options = {}) {
+    if (isCatalogRefreshing) return false;
+    isCatalogRefreshing = true;
+
     try {
-      if (itemCount) itemCount.textContent = "Loading...";
-      const res = await fetch(CONFIG.CATALOG_URL + "?v=" + Date.now(), { cache: "no-store" });
+      const startTime = Date.now();
+      const res = await fetch(CONFIG.CATALOG_URL + "?refresh=" + startTime, { cache: "no-store" });
       if (!res.ok) throw new Error("Catalog HTTP " + res.status);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Catalog format invalid");
+      
       items = data.map(normalize).filter(x => x.name);
       if (sourceNote) {
         sourceNote.textContent = "Latest releases, curated for NIK MODS.";
       }
+      
+      // Re-render preserving currentFilter and searchInput query
       render();
+
+      const minDuration = options.minDuration || 0;
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minDuration) {
+        await new Promise(r => setTimeout(r, minDuration - elapsed));
+      }
+      return true;
     } catch (e) {
-      console.error("NIK MODS catalog error:", e);
+      console.error("NIK MODS refresh error:", e);
+      return false;
+    } finally {
+      isCatalogRefreshing = false;
+    }
+  }
+
+  async function load() {
+    if (itemCount) itemCount.textContent = "Loading...";
+    const success = await performCatalogRefresh({ minDuration: 0 });
+    if (!success) {
       items = [];
       if (itemCount) itemCount.textContent = "0 items";
       if (catalogList) {
@@ -483,6 +509,205 @@
       }
     }
   }
+
+  // --- Header Refresh Button Interaction ---
+  const headerRefreshBtn = $("#headerRefreshBtn");
+  if (headerRefreshBtn) {
+    headerRefreshBtn.addEventListener("click", async () => {
+      if (headerRefreshBtn.dataset.busy === "1" || isCatalogRefreshing) return;
+      headerRefreshBtn.dataset.busy = "1";
+      headerRefreshBtn.disabled = true;
+      headerRefreshBtn.classList.add("is-refreshing");
+
+      const success = await performCatalogRefresh({ minDuration: 850 });
+
+      headerRefreshBtn.classList.remove("is-refreshing");
+
+      if (success) {
+        headerRefreshBtn.classList.add("is-updated");
+        setTimeout(() => {
+          headerRefreshBtn.classList.remove("is-updated");
+          headerRefreshBtn.dataset.busy = "0";
+          headerRefreshBtn.disabled = false;
+        }, 1000);
+      } else {
+        headerRefreshBtn.classList.add("is-error");
+        setTimeout(() => {
+          headerRefreshBtn.classList.remove("is-error");
+          headerRefreshBtn.dataset.busy = "0";
+          headerRefreshBtn.disabled = false;
+        }, 800);
+      }
+    });
+  }
+
+  // --- Mobile Pull-To-Refresh Interaction ---
+  function initPullToRefresh() {
+    const ptr = $("#pullToRefresh");
+    if (!ptr) return;
+
+    const icon = ptr.querySelector(".ptr-icon");
+    const label = ptr.querySelector(".ptr-text");
+
+    let touchStartY = 0;
+    let touchStartX = 0;
+    let startScrollY = 0;
+    let isPulling = false;
+    let pullDistance = 0;
+    let hasVibrated = false;
+    let isLocked = false;
+    const THRESHOLD = 72; // Threshold in px to trigger refresh
+    const MAX_PULL = 110;
+
+    function getScrollTop() {
+      return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    }
+
+    window.addEventListener("touchstart", (e) => {
+      if (isCatalogRefreshing || isLocked) return;
+      startScrollY = getScrollTop();
+      if (startScrollY > 2) {
+        isPulling = false;
+        return;
+      }
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+      isPulling = false;
+      pullDistance = 0;
+      hasVibrated = false;
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+      if (isCatalogRefreshing || isLocked) return;
+      if (!e.touches || e.touches.length === 0) return;
+
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const diffY = currentY - touchStartY;
+      const diffX = currentX - touchStartX;
+
+      // Only engage if touch originated at top and user is pulling downward
+      if (startScrollY > 2 || getScrollTop() > 2) {
+        if (isPulling) resetPtr(false);
+        return;
+      }
+
+      if (!isPulling) {
+        if (diffY > 8 && Math.abs(diffY) > Math.abs(diffX) && getScrollTop() <= 0) {
+          isPulling = true;
+        } else {
+          return;
+        }
+      }
+
+      if (isPulling) {
+        const rawPull = Math.max(0, diffY - 8);
+        pullDistance = Math.min(MAX_PULL, rawPull * 0.48);
+
+        // Cancel native overscroll bounce if pull is active
+        if (e.cancelable && pullDistance > 10) {
+          e.preventDefault();
+        }
+
+        renderPull(pullDistance);
+      }
+    }, { passive: false });
+
+    function renderPull(dist) {
+      if (dist <= 15) {
+        ptr.style.opacity = "0";
+        ptr.style.transform = "translate3d(-50%, -130%, 0)";
+        return;
+      }
+
+      // 15px - 60px: indicator smoothly appears from top
+      const translateY = -28 + (dist * 0.7);
+      const opacity = Math.min(1, (dist - 15) / 25);
+      const rotation = dist * 4.2;
+
+      ptr.style.transition = "none";
+      ptr.style.opacity = opacity.toFixed(2);
+      ptr.style.transform = `translate3d(-50%, ${translateY.toFixed(1)}px, 0)`;
+
+      if (icon) {
+        icon.style.transform = `rotate(${rotation.toFixed(0)}deg)`;
+      }
+
+      if (dist >= THRESHOLD) {
+        if (!hasVibrated) {
+          hasVibrated = true;
+          if (window.navigator && typeof window.navigator.vibrate === "function") {
+            try { window.navigator.vibrate(12); } catch (_) {}
+          }
+        }
+        ptr.classList.add("ptr-ready");
+        if (label) label.textContent = "RELEASE TO REFRESH";
+      } else {
+        hasVibrated = false;
+        ptr.classList.remove("ptr-ready");
+        if (label) label.textContent = "PULL TO REFRESH";
+      }
+    }
+
+    async function handleRelease() {
+      if (!isPulling) return;
+      isPulling = false;
+
+      if (pullDistance < THRESHOLD) {
+        resetPtr(true);
+      } else {
+        isLocked = true;
+        ptr.style.transition = "transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease";
+        ptr.style.transform = "translate3d(-50%, 18px, 0)";
+        ptr.style.opacity = "1";
+        ptr.classList.remove("ptr-ready");
+        ptr.classList.add("ptr-loading");
+        if (label) label.textContent = "REFRESHING...";
+
+        const success = await performCatalogRefresh({ minDuration: 900 });
+
+        if (success) {
+          ptr.classList.remove("ptr-loading");
+          ptr.classList.add("ptr-success");
+          if (label) label.textContent = "UPDATED";
+          await new Promise(r => setTimeout(r, 650));
+        } else {
+          ptr.classList.remove("ptr-loading");
+          ptr.classList.add("ptr-error");
+          if (label) label.textContent = "FAILED";
+          await new Promise(r => setTimeout(r, 650));
+        }
+
+        resetPtr(true);
+        setTimeout(() => {
+          isLocked = false;
+        }, 350);
+      }
+    }
+
+    window.addEventListener("touchend", handleRelease, { passive: true });
+    window.addEventListener("touchcancel", () => resetPtr(true), { passive: true });
+
+    function resetPtr(animated) {
+      isPulling = false;
+      hasVibrated = false;
+      pullDistance = 0;
+      if (animated) {
+        ptr.style.transition = "transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease";
+      } else {
+        ptr.style.transition = "none";
+      }
+      ptr.style.opacity = "0";
+      ptr.style.transform = "translate3d(-50%, -130%, 0)";
+      if (icon) icon.style.transform = "rotate(0deg)";
+      setTimeout(() => {
+        ptr.classList.remove("ptr-ready", "ptr-loading", "ptr-success", "ptr-error");
+        if (label) label.textContent = "PULL TO REFRESH";
+      }, 300);
+    }
+  }
+
+  initPullToRefresh();
 
   // --- Dynamic Search ---
   if (searchInput) {

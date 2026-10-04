@@ -50,7 +50,7 @@
         }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=14">
+    <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body class="antialiased font-sans selection:bg-brand-accent selection:text-white">
 
@@ -59,6 +59,17 @@
     <!-- Ambient Light Orbs (Optimized Radial Gradients: zero CSS filter convolution overhead) -->
     <div class="fixed top-[-10%] left-[-10%] w-[45vw] h-[45vw] rounded-full pointer-events-none z-[-1]" style="background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, transparent 70%);"></div>
     <div class="fixed bottom-[-10%] right-[-10%] w-[35vw] h-[35vw] rounded-full pointer-events-none z-[-1]" style="background: radial-gradient(circle, rgba(255, 0, 60, 0.05) 0%, transparent 70%);"></div>
+
+    <!-- NIK MODS Custom Pull-To-Refresh Indicator -->
+    <div id="pullToRefresh" class="ptr-indicator" aria-hidden="true">
+        <div class="ptr-glass-pill">
+            <div class="ptr-orb">
+                <i class="ptr-icon fa-solid fa-arrows-rotate"></i>
+                <i class="ptr-check fa-solid fa-check"></i>
+            </div>
+            <span class="ptr-text">PULL TO REFRESH</span>
+        </div>
+    </div>
 
     <!-- Mobile Container (Max width for desktop, full width for mobile) -->
     <div class="max-w-md mx-auto min-h-screen relative flex flex-col">
@@ -83,9 +94,11 @@
 
             <!-- Header Actions -->
             <div class="flex items-center gap-4">
-                <a href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" class="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-300 hover:text-white transition-all hover:scale-105 chasing-border" aria-label="Telegram Channel" title="Join NIK MODS Telegram">
-                    <i class="fa-brands fa-telegram text-sm"></i>
-                </a>
+                <button id="headerRefreshBtn" type="button" class="header-refresh-btn w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-300 hover:text-white transition-all hover:scale-105 chasing-border relative overflow-hidden" aria-label="Refresh catalog" title="Refresh NIK MODS Catalog">
+                    <i class="refresh-icon fa-solid fa-arrows-rotate text-xs"></i>
+                    <i class="check-icon fa-solid fa-check text-xs"></i>
+                    <span class="refresh-ripple" aria-hidden="true"></span>
+                </button>
                 <button id="navToggleBtn" class="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-300 hover:text-white transition-all hover:scale-105 chasing-border relative z-[100]" aria-label="Toggle navigation menu">
                     <i id="navIcon" class="fa-solid fa-bars text-sm transition-transform duration-300"></i>
                 </button>
