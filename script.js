@@ -40,50 +40,6 @@
     PAYMENT_STATUS_ENDPOINT: "https://nik-mods-payments.godrp3236.workers.dev/status"
   };
 
-  // -------------------------------------------------------------------------
-  // CUSTOM SCROLL RAIL — visual only; Lenis remains the scroll engine.
-  // -------------------------------------------------------------------------
-  const scrollRail = document.getElementById("scrollRail");
-  const scrollThumb = document.getElementById("scrollThumb");
-  let scrollRailHideTimer = null;
-
-  function updateScrollRail(scrollY = window.scrollY || 0) {
-    if (!scrollRail || !scrollThumb) return;
-
-    const doc = document.documentElement;
-    const viewport = window.innerHeight || 1;
-    const scrollLimit = Math.max(0, doc.scrollHeight - viewport);
-    const railHeight = scrollRail.clientHeight || Math.max(1, viewport - 20);
-    const thumbHeight = scrollLimit > 0
-      ? Math.max(54, Math.min(railHeight, railHeight * (viewport / doc.scrollHeight)))
-      : railHeight;
-    const travel = Math.max(0, railHeight - thumbHeight);
-    const progress = scrollLimit > 0 ? Math.min(1, Math.max(0, scrollY / scrollLimit)) : 0;
-
-    scrollThumb.style.height = thumbHeight + "px";
-    scrollThumb.style.transform = "translateX(-50%) translateY(" + (travel * progress) + "px)";
-  }
-
-  function showScrollRail(scrollY) {
-    updateScrollRail(scrollY);
-    if (!scrollRail) return;
-    scrollRail.classList.add("is-visible");
-    clearTimeout(scrollRailHideTimer);
-    scrollRailHideTimer = setTimeout(() => {
-      scrollRail.classList.remove("is-visible");
-    }, 850);
-  }
-
-  if (smoothScroller) {
-    smoothScroller.on("scroll", ({ scroll }) => showScrollRail(scroll));
-  } else {
-    window.addEventListener("scroll", () => showScrollRail(window.scrollY), { passive: true });
-  }
-
-  window.addEventListener("resize", () => updateScrollRail(window.scrollY), { passive: true });
-  window.addEventListener("pageshow", () => updateScrollRail(window.scrollY), { passive: true });
-  updateScrollRail(window.scrollY);
-
   const $ = s => document.querySelector(s);
   const $$ = s => document.querySelectorAll(s);
 
