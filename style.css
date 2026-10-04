@@ -173,3 +173,32 @@ html {
     box-shadow: 0 0 20px rgba(255, 0, 60, 0.25) !important;
 }
 
+
+
+/* NIK MODS Tip QR — premium scan animation */
+.qr-frame {
+    isolation: isolate;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 0 45px rgba(255,0,60,0.16),
+        inset 0 0 24px rgba(0,0,0,0.06);
+}
+.qr-scan-line {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 8%;
+    height: 2px;
+    z-index: 25;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,0,60,0.95), transparent);
+    box-shadow: 0 0 14px rgba(255,0,60,0.7);
+    animation: qr-scan 2.4s ease-in-out infinite;
+}
+@keyframes qr-scan {
+    0%, 100% { transform: translateY(0); opacity: 0; }
+    12% { opacity: 1; }
+    50% { transform: translateY(190px); opacity: 1; }
+    88% { opacity: 1; }
+    100% { transform: translateY(0); opacity: 0; }
+}
