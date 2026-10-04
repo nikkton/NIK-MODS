@@ -200,7 +200,7 @@
                     <span>Verified FamGateway &bull; End-to-end encrypted</span>
                 </div>
                 <p class="text-[10px] text-white/30 font-mono">
-                    Prefer UPI / dynamic checkout for verified payment.
+                    Scan the dynamic QR with any UPI app. Payment is verified automatically.
                 </p>
             </div>
         </div>
@@ -245,39 +245,30 @@
                         <i id="copyOrderIcon" class="fa-regular fa-copy"></i>
                     </button>
                 </div>
-
-                <!-- Action Buttons: Primary is PAY WITH UPI APP -->
-                <div class="w-full flex flex-col gap-2.5 mb-2">
-                    <!-- UPI Intent Button (Primary on Android/Mobile) -->
-                    <a id="payWithUpiIntentBtn" href="#" onclick="triggerUpiIntent(event)" class="w-full bg-brand-accent hover:bg-[#e00035] text-white py-3.5 rounded-xl text-xs sm:text-sm font-bold tracking-wider transition-all flex items-center justify-center gap-2 chasing-border active:scale-95 text-center shadow-[0_0_25px_rgba(255,0,60,0.3)]">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>PAY WITH UPI APP</span>
-                    </a>
-
-                    <!-- Toggle QR Button (Separate Fallback) -->
-                    <button type="button" id="toggleQrBtn" onclick="toggleQrVisibility()" class="w-full glass-card border border-white/10 text-white/80 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
-                        <i class="fa-solid fa-qrcode text-brand-accent"></i>
-                        <span id="toggleQrText">SHOW QR CODE</span>
-                    </button>
-
-                    <!-- Open Secure Checkout (Separate Fallback) -->
-                    <a id="openCheckoutLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full glass-card border border-white/10 text-white/60 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
-                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                        <span>OPEN SECURE CHECKOUT</span>
-                    </a>
+                <div class="w-full flex items-center justify-center mb-3">
+                    <div class="glass-card rounded-full px-3.5 py-1.5 border border-white/10 text-[10px] font-mono tracking-wider text-white/45">
+                        <i class="fa-regular fa-clock mr-1.5 text-brand-accent"></i>
+                        EXPIRES IN <span id="expiryCountdown" class="text-white/80 font-semibold">05:00</span>
+                    </div>
                 </div>
 
-                <!-- Dynamic QR View (Hidden by default, separate fallback) -->
-                <div id="qrSection" class="w-full mt-3 mb-2 flex flex-col items-center hidden transition-all duration-300">
-                    <div class="w-48 h-48 rounded-2xl bg-white p-2.5 shadow-[0_0_30px_rgba(255,255,255,0.15)] flex items-center justify-center relative overflow-hidden border border-white/20">
-                        <img id="dynamicQrImage" src="" alt="UPI Payment QR Code" class="w-full h-full object-contain" />
-                        <!-- QR Skeleton while loading image -->
-                        <div id="qrLoadingSkeleton" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-slate-800">
-                            <div class="w-8 h-8 rounded-full border-2 border-slate-300 border-t-brand-accent animate-spin mb-2"></div>
-                            <span class="text-[10px] font-mono text-slate-500">Loading dynamic QR...</span>
+                <!-- QR-FIRST PAYMENT -->
+                <div class="w-full flex flex-col items-center gap-3 mb-2">
+                    <div id="qrSection" class="w-full flex flex-col items-center">
+                        <div class="qr-frame w-52 h-52 sm:w-56 sm:h-56 rounded-[1.6rem] bg-white p-3 shadow-[0_0_45px_rgba(255,0,60,0.18)] flex items-center justify-center relative overflow-hidden border border-white/20">
+                            <img id="dynamicQrImage" src="" alt="UPI Payment QR Code" class="w-full h-full object-contain relative z-10 rounded-xl" />
+                            <div id="qrLoadingSkeleton" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-slate-800 z-20">
+                                <div class="w-9 h-9 rounded-full border-2 border-slate-300 border-t-brand-accent animate-spin mb-2"></div>
+                                <span class="text-[10px] font-mono text-slate-500">Generating secure QR...</span>
+                            </div>
+                            <div class="qr-scan-line" aria-hidden="true"></div>
                         </div>
+                        <span class="text-[10px] font-mono text-white/45 mt-2.5 tracking-wider">SCAN WITH ANY UPI APP</span>
+                        <button type="button" id="saveQrBtn" onclick="saveQrCode()" class="mt-3 glass-card border border-white/10 text-white/80 hover:text-white px-5 py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-brand-accent/40 active:scale-95">
+                            <i class="fa-solid fa-download text-brand-accent"></i>
+                            <span id="saveQrText">SAVE QR</span>
+                        </button>
                     </div>
-                    <span class="text-[10px] font-mono text-white/40 mt-2">Scan with another device or camera</span>
                 </div>
 
                 <!-- Live Polling Notice -->
@@ -358,7 +349,8 @@
                 WORKER_URL: "https://nik-mods-payments.godrp3236.workers.dev",
                 CREATE_ORDER_PATH: "/create-order",
                 STATUS_PATH: "/status",
-                POLL_INTERVAL_MS: 2500,
+                POLL_INTERVAL_MS: 3500,
+                FAMGATEWAY_PUBLIC_STATUS_URL: "https://famgateway.in/api/checkout-status.php",
                 MAX_POLL_DURATION_MS: 300000 // 5 minutes matching FamGateway order expiry
             };
 
@@ -367,6 +359,8 @@
             let activeOrder = null;
             let pollTimer = null;
             let pollStartTime = 0;
+            let expiryAtMs = 0;
+            let expiryTimer = null;
             let isCreatingOrder = false;
 
             // DOM Elements
@@ -391,10 +385,9 @@
             const dynamicQrImage = document.getElementById("dynamicQrImage");
             const qrLoadingSkeleton = document.getElementById("qrLoadingSkeleton");
             const qrSection = document.getElementById("qrSection");
-            const toggleQrBtn = document.getElementById("toggleQrBtn");
-            const toggleQrText = document.getElementById("toggleQrText");
-            const payWithUpiIntentBtn = document.getElementById("payWithUpiIntentBtn");
-            const openCheckoutLink = document.getElementById("openCheckoutLink");
+            const saveQrBtn = document.getElementById("saveQrBtn");
+            const saveQrText = document.getElementById("saveQrText");
+            const expiryCountdown = document.getElementById("expiryCountdown");
             const pollStatusNotice = document.getElementById("pollStatusNotice");
             const copyOrderIcon = document.getElementById("copyOrderIcon");
             const successAmountDisplay = document.getElementById("successAmountDisplay");
@@ -550,7 +543,8 @@
                         qr_url: orderData.qr_url || "",
                         upi_intent: orderData.upi_intent || "",
                         upi_id: orderData.upi_id || "",
-                        amount: orderData.amount || currentAmount
+                        amount: orderData.amount || currentAmount,
+                        expires_at_ist: orderData.expires_at_ist || orderData.expires_at || ""
                     };
 
                     // Save order_id to sessionStorage
@@ -599,10 +593,8 @@
                 modalAmountDisplay.textContent = `₹${Number(order.amount).toLocaleString("en-IN")}`;
                 modalOrderId.textContent = order.order_id;
 
-                // Dynamic QR Code preloading (Separate Fallback, hidden by default)
-                isQrHidden = true;
-                if (qrSection) qrSection.classList.add("hidden");
-                if (toggleQrText) toggleQrText.textContent = "SHOW QR CODE";
+                // QR-first flow: show the dynamic FamGateway QR immediately.
+                if (qrSection) qrSection.classList.remove("hidden");
 
                 if (order.qr_url && dynamicQrImage) {
                     qrLoadingSkeleton.classList.remove("hidden");
@@ -615,22 +607,8 @@
                     dynamicQrImage.src = order.qr_url;
                 }
 
-                // UPI Intent Button (Primary on Android/Mobile)
-                if (order.upi_intent && payWithUpiIntentBtn) {
-                    payWithUpiIntentBtn.href = order.upi_intent;
-                    payWithUpiIntentBtn.classList.remove("hidden");
-                    payWithUpiIntentBtn.classList.add("flex");
-                } else {
-                    if (payWithUpiIntentBtn) payWithUpiIntentBtn.classList.add("hidden");
-                }
-
-                // Hosted Checkout Link (Separate Fallback)
-                if (order.checkout_url && openCheckoutLink) {
-                    openCheckoutLink.href = order.checkout_url;
-                    openCheckoutLink.classList.remove("hidden");
-                } else {
-                    if (openCheckoutLink) openCheckoutLink.classList.add("hidden");
-                }
+                // Start the exact FamGateway payment-session countdown.
+                startExpiryCountdown(order.expires_at_ist);
 
                 // Open modal with smooth transition
                 paymentModal.classList.remove("hidden");
@@ -643,40 +621,80 @@
                 });
             }
 
-            // Standard UPI Intent Trigger
-            // Launches exact standard upi://pay URI returned by FamGateway (app-to-app, no gallery QR)
-            window.triggerUpiIntent = function(e) {
-                if (!activeOrder?.upi_intent) {
-                    if (e) e.preventDefault();
-                    return;
-                }
-                const upiUri = activeOrder.upi_intent;
+            // Save the exact dynamic QR generated for this payment order.
+            window.saveQrCode = async function() {
+                const qrUrl = activeOrder?.qr_url;
+                if (!qrUrl) return;
 
-                if (payWithUpiIntentBtn) {
-                    payWithUpiIntentBtn.href = upiUri;
-                }
+                if (saveQrText) saveQrText.textContent = "SAVING...";
+                if (saveQrBtn) saveQrBtn.disabled = true;
 
                 try {
-                    window.location.href = upiUri;
-                    if (e) e.preventDefault();
+                    const response = await fetch(qrUrl, { cache: "no-store", mode: "cors" });
+                    if (!response.ok) throw new Error("QR download failed");
+
+                    const blob = await response.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = objectUrl;
+                    link.download = "NIK-MODS-QR-" + activeOrder.order_id + ".png";
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                    if (saveQrText) saveQrText.textContent = "SAVED ✓";
                 } catch (err) {
-                    console.warn("Direct intent launch notice:", err);
+                    window.open(qrUrl, "_blank", "noopener,noreferrer");
+                    if (saveQrText) saveQrText.textContent = "OPEN QR";
+                } finally {
+                    setTimeout(() => {
+                        if (saveQrText) saveQrText.textContent = "SAVE QR";
+                        if (saveQrBtn) saveQrBtn.disabled = false;
+                    }, 1800);
                 }
             };
 
-            // Toggle QR Visibility (Separate Fallback)
-            let isQrHidden = true;
-            window.toggleQrVisibility = function() {
-                if (!qrSection) return;
-                isQrHidden = !isQrHidden;
-                if (isQrHidden) {
-                    qrSection.classList.add("hidden");
-                    if (toggleQrText) toggleQrText.textContent = "SHOW QR CODE";
-                } else {
-                    qrSection.classList.remove("hidden");
-                    if (toggleQrText) toggleQrText.textContent = "HIDE QR CODE";
-                }
-            };
+            function parseFamGatewayExpiry(value) {
+                if (!value) return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
+                const m = String(value).match(/(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})/);
+                if (!m) return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
+
+                const dd = Number(m[1]);
+                const mm = Number(m[2]);
+                const yyyy = Number(m[3]);
+                const hh = Number(m[4]);
+                const min = Number(m[5]);
+                const ss = Number(m[6]);
+
+                // FamGateway timestamps are explicitly IST (UTC+05:30).
+                return Date.UTC(yyyy, mm - 1, dd, hh, min, ss) - (5.5 * 60 * 60 * 1000);
+            }
+
+            function startExpiryCountdown(expiryValue) {
+                if (expiryTimer) clearInterval(expiryTimer);
+                expiryAtMs = parseFamGatewayExpiry(expiryValue);
+
+                const tick = () => {
+                    const remaining = Math.max(0, expiryAtMs - Date.now());
+                    const totalSeconds = Math.ceil(remaining / 1000);
+                    const mins = Math.floor(totalSeconds / 60);
+                    const secs = totalSeconds % 60;
+
+                    if (expiryCountdown) {
+                        expiryCountdown.textContent = String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+                        expiryCountdown.classList.toggle("text-brand-accent", remaining <= 30000);
+                    }
+
+                    if (remaining <= 0) {
+                        clearInterval(expiryTimer);
+                        expiryTimer = null;
+                        if (activeOrder) showPaymentError("Payment session expired. Please create a new tip order.");
+                    }
+                };
+
+                tick();
+                expiryTimer = setInterval(tick, 1000);
+            }
 
             // Copy Order ID
             window.copyOrderId = function() {
@@ -690,52 +708,72 @@
             };
 
             // Status Verification Polling
+            // Primary status source is FamGateway's documented public browser-safe
+            // checkout-status endpoint. The Cloudflare Worker remains the fallback.
             function startStatusPolling(orderId) {
                 stopStatusPolling();
-
                 pollStartTime = Date.now();
+                const localDeadline = expiryAtMs || (pollStartTime + PAYMENT_CONFIG.MAX_POLL_DURATION_MS);
 
                 const checkStatus = async () => {
-                    // Check timeout
-                    if (Date.now() - pollStartTime > PAYMENT_CONFIG.MAX_POLL_DURATION_MS) {
+                    if (Date.now() >= localDeadline) {
                         stopStatusPolling();
-                        showPaymentError("The payment session timed out. If you paid, please verify on your banking app or try again.");
+                        showPaymentError("Payment session expired. Please create a new tip order.");
                         return;
                     }
 
+                    let statusPayload = null;
+
                     try {
-                        const statusUrl = `${PAYMENT_CONFIG.WORKER_URL}${PAYMENT_CONFIG.STATUS_PATH}?order_id=${encodeURIComponent(orderId)}`;
-                        const res = await fetch(statusUrl, { cache: "no-store" });
-                        
-                        if (res.ok) {
-                            const data = await res.json();
-                            const isPaid = data.verified === true ||
-                                           data.status === "SUCCESS" ||
-                                           data.status === "success" ||
-                                           data.status === "paid" ||
-                                           data.status === "COMPLETED";
-
-                            if (isPaid) {
-                                stopStatusPolling();
-                                showPaymentSuccess(orderId, activeOrder?.amount || currentAmount);
-                                return;
-                            }
-
-                            if (data.status === "expired" || data.status === "failed") {
-                                stopStatusPolling();
-                                showPaymentError("Order has expired or was not completed.");
-                                return;
-                            }
-                        }
+                        const directUrl = PAYMENT_CONFIG.FAMGATEWAY_PUBLIC_STATUS_URL +
+                            "?order_id=" + encodeURIComponent(orderId);
+                        const directRes = await fetch(directUrl, { cache: "no-store" });
+                        if (directRes.ok) statusPayload = await directRes.json();
                     } catch (e) {
-                        console.warn("Status check transient notice:", e);
+                        console.warn("Direct FamGateway status check notice:", e);
+                    }
+
+                    if (!statusPayload) {
+                        try {
+                            const statusUrl = PAYMENT_CONFIG.WORKER_URL +
+                                PAYMENT_CONFIG.STATUS_PATH +
+                                "?order_id=" + encodeURIComponent(orderId);
+                            const res = await fetch(statusUrl, { cache: "no-store" });
+                            if (res.ok) statusPayload = await res.json();
+                        } catch (e) {
+                            console.warn("Backend status check notice:", e);
+                        }
+                    }
+
+                    if (!statusPayload) return;
+
+                    const nested = statusPayload.data || statusPayload.result || {};
+                    const status = String(
+                        statusPayload.status ??
+                        nested.status ??
+                        statusPayload.state ??
+                        nested.state ??
+                        ""
+                    ).toLowerCase();
+
+                    const isPaid =
+                        statusPayload.verified === true ||
+                        nested.verified === true ||
+                        ["success", "paid", "completed"].includes(status);
+
+                    if (isPaid) {
+                        stopStatusPolling();
+                        showPaymentSuccess(orderId, activeOrder?.amount || currentAmount);
+                        return;
+                    }
+
+                    if (["expired", "failed", "cancelled"].includes(status)) {
+                        stopStatusPolling();
+                        showPaymentError("Payment session expired or was not completed.");
                     }
                 };
 
-                // Immediate initial check
                 checkStatus();
-
-                // Recurring poll every 2.5s
                 pollTimer = setInterval(checkStatus, PAYMENT_CONFIG.POLL_INTERVAL_MS);
             }
 
@@ -743,6 +781,10 @@
                 if (pollTimer) {
                     clearInterval(pollTimer);
                     pollTimer = null;
+                }
+                if (expiryTimer) {
+                    clearInterval(expiryTimer);
+                    expiryTimer = null;
                 }
             }
 
