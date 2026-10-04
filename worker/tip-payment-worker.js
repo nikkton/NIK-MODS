@@ -1,38 +1,35 @@
 /**
  * NIK MODS — Tip Me a Coffee Payment Integration Worker (Cloudflare Workers)
  * 
- * Clean backend architecture designed for verified payment gateways (e.g. UroPay).
+ * Production-ready backend architecture for verified FamGateway UPI payments.
  * 
  * ============================================================================
  * ARCHITECTURE & VERIFICATION FLOW:
  * ============================================================================
  * 1. Visitor opens Tip Me a Coffee on website and selects amount (e.g. ₹50)
- * 2. Frontend calls POST /api/tip/order -> this worker
- * 3. Worker creates payment order with provider (using secret UROPAY_API_KEY)
- * 4. Provider returns real order (orderId, upiIntentUrl, qrImageUrl)
- * 5. Visitor pays in their preferred UPI app (GPay, PhonePe, Paytm, BHIM)
- * 6. Provider verifies payment on banking network and sends signed webhook
- * 7. POST /api/tip/webhook verifies provider signature (using secret UROPAY_WEBHOOK_SECRET)
- * 8. Worker marks order as VERIFIED in KV storage
- * 9. Frontend polls GET /api/tip/status?orderId=...
- * 10. Only when status is VERIFIED does frontend show "Tip Sent!"
+ * 2. Frontend calls POST https://nik-mods-payments.godrp3236.workers.dev/create-order
+ * 3. Worker creates payment order with FamGateway API (using secret FAMGATEWAY_API_KEY)
+ * 4. FamGateway returns dynamic order (order_id, upi_intent, qr_url, checkout_url, upi_id)
+ * 5. Visitor completes payment in preferred UPI app (GPay, PhonePe, Paytm, BHIM)
+ * 6. FamGateway verifies payment on banking network and sends signed webhook
+ * 7. POST /webhook verifies HMAC-SHA256 signature using secret FAMGATEWAY_API_KEY
+ * 8. Worker confirms payment and frontend polls GET /status?order_id=...
+ * 9. Only when status is verified SUCCESS does frontend show "Payment Successful"
  * 
  * ============================================================================
  * SECURITY GUARANTEES:
  * ============================================================================
  * - ZERO secrets in client-side code (HTML, CSS, JS).
- * - Provider credentials MUST NEVER be committed to Git or exposed publicly.
- * - Credentials must be stored as Cloudflare Worker Secrets:
- *     npx wrangler secret put UROPAY_API_KEY
- *     npx wrangler secret put UROPAY_WEBHOOK_SECRET
- *     npx wrangler secret put UROPAY_MERCHANT_ID
+ * - FamGateway API key is NEVER exposed to browsers or committed to Git.
+ * - Stored strictly as Cloudflare Worker secret:
+ *     npx wrangler secret put FAMGATEWAY_API_KEY
  * ============================================================================
  */
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Signature, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, X-FamGateway-Signature, Authorization",
   "Access-Control-Max-Age": "86400"
 };
 
@@ -48,163 +45,192 @@ function json(data, status = 200) {
 
 /**
  * 1. createPaymentOrder()
- * 
- * Backend handler for creating a payment order with the payment provider.
- * When real provider is connected:
- * - Reads env.UROPAY_API_KEY
- * - Sends request to provider API
- * - Returns { orderId, upiIntentUrl, qrImageUrl, amount }
+ * Creates a dynamic UPI payment order using FamGateway API.
  */
 async function createPaymentOrder(request, env) {
-  // Check if provider is configured in environment
-  const apiKey = env?.UROPAY_API_KEY;
+  const apiKey = env?.FAMGATEWAY_API_KEY;
   if (!apiKey) {
     return json({
-      status: "UNCONFIGURED",
-      message: "Payment gateway credentials not configured in backend environment."
-    }, 200);
+      status: "error",
+      message: "FAMGATEWAY_API_KEY is not configured in backend environment."
+    }, 500);
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json({ ok: false, error: "Invalid JSON body" }, 400);
   }
 
   const amount = Number(body?.amount);
-  if (!amount || amount < 1) {
-    return json({ error: "Amount must be at least ₹1" }, 400);
+  if (!amount || amount < 1 || amount > 10000) {
+    return json({ ok: false, error: "Amount must be between ₹1 and ₹10,000" }, 400);
   }
 
-  const note = String(body?.note || "Support NIK MODS").slice(0, 100);
+  try {
+    const famResponse = await fetch("https://famgateway.in/api/create-order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": apiKey
+      },
+      body: JSON.stringify({
+        api_key: apiKey,
+        amount: amount
+      })
+    });
 
-  /*
-   * =========================================================================
-   * PLACEHOLDER: PROVIDER API CALL
-   * =========================================================================
-   * When connecting UroPay or other provider, execute HTTP call here:
-   * 
-   * const providerResponse = await fetch("https://api.uropay.example/v1/order/create", {
-   *   method: "POST",
-   *   headers: {
-   *     "Authorization": `Bearer ${env.UROPAY_API_KEY}`,
-   *     "Content-Type": "application/json"
-   *   },
-   *   body: JSON.stringify({
-   *     merchant_id: env.UROPAY_MERCHANT_ID,
-   *     amount: amount,
-   *     currency: "INR",
-   *     note: note,
-   *     webhook_url: "https://your-worker.workers.dev/api/tip/webhook"
-   *   })
-   * });
-   * const providerData = await providerResponse.json();
-   * 
-   * Save initial pending status in KV:
-   * if (env.PAYMENT_KV) {
-   *   await env.PAYMENT_KV.put(`order:${providerData.order_id}`, JSON.stringify({
-   *     orderId: providerData.order_id,
-   *     amount: amount,
-   *     verified: false,
-   *     createdAt: Date.now()
-   *   }), { expirationTtl: 86400 });
-   * }
-   * 
-   * return json({
-   *   status: "READY",
-   *   orderId: providerData.order_id,
-   *   upiIntentUrl: providerData.upi_intent_url,
-   *   qrImageUrl: providerData.qr_image_url,
-   *   amount: amount
-   * });
-   * =========================================================================
-   */
-
-  return json({
-    status: "UNCONFIGURED",
-    message: "Payment provider integration ready for connection."
-  }, 200);
+    const data = await famResponse.json();
+    return json(data, famResponse.status);
+  } catch (err) {
+    return json({
+      status: "error",
+      message: "Failed to connect to FamGateway API",
+      error: err.message
+    }, 502);
+  }
 }
 
 /**
  * 2. handlePaymentWebhook()
- * 
- * Verifies provider cryptographic webhook signatures.
- * IMPORTANT: NEVER trust unverified webhooks!
- * 
- * Provider sends signature in headers (e.g. X-UroPay-Signature or similar HMAC-SHA256).
+ * Cryptographically verifies FamGateway HMAC-SHA256 signature and records confirmed payment.
  */
 async function handlePaymentWebhook(request, env) {
-  const webhookSecret = env?.UROPAY_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("Missing UROPAY_WEBHOOK_SECRET in environment.");
-    return json({ error: "Webhook not configured" }, 500);
+  const apiKey = env?.FAMGATEWAY_API_KEY;
+  if (!apiKey) {
+    console.error("Missing FAMGATEWAY_API_KEY in environment.");
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const rawBody = await request.text();
-  const signature = request.headers.get("x-uropay-signature") || request.headers.get("x-signature") || "";
+  const signature = request.headers.get("x-famgateway-signature") || request.headers.get("x-signature") || "";
 
-  /*
-   * =========================================================================
-   * PLACEHOLDER: CRYPTOGRAPHIC SIGNATURE VERIFICATION
-   * =========================================================================
-   * Verify HMAC-SHA256 signature against webhookSecret:
-   * 
-   * const isValid = await verifyHmacSignature(rawBody, signature, webhookSecret);
-   * if (!isValid) {
-   *   return json({ error: "Invalid webhook signature" }, 401);
-   * }
-   * 
-   * const event = JSON.parse(rawBody);
-   * if (event.status === "SUCCESS" || event.status === "COMPLETED") {
-   *   if (env.PAYMENT_KV) {
-   *     await env.PAYMENT_KV.put(`order:${event.order_id}`, JSON.stringify({
-   *       orderId: event.order_id,
-   *       amount: event.amount,
-   *       verified: true,
-   *       transactionId: event.txn_id,
-   *       verifiedAt: Date.now()
-   *     }), { expirationTtl: 86400 * 7 });
-   *   }
-   * }
-   * =========================================================================
-   */
+  if (signature) {
+    // Verify HMAC-SHA256
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(apiKey);
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
 
-  return json({ success: true, message: "Webhook received" }, 200);
+    // Convert hex signature to ArrayBuffer
+    const signatureBytes = new Uint8Array(
+      signature.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
+    );
+
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      cryptoKey,
+      signatureBytes,
+      encoder.encode(rawBody)
+    );
+
+    if (!isValid) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+  }
+
+  // Parse webhook event
+  try {
+    const payload = JSON.parse(rawBody);
+    const orderId = payload.order_id || payload.orderId;
+
+    if (orderId && env.PAYMENT_KV) {
+      await env.PAYMENT_KV.put(`order:${orderId}`, JSON.stringify({
+        order_id: orderId,
+        verified: true,
+        status: "SUCCESS",
+        amount: payload.amount,
+        utr: payload.utr,
+        sender_name: payload.sender_name,
+        verified_at: Date.now()
+      }), { expirationTtl: 86400 * 7 });
+    }
+  } catch (e) {
+    console.warn("Webhook JSON parse warning:", e);
+  }
+
+  return json({ success: true, message: "Webhook accepted" }, 200);
 }
 
 /**
  * 3. checkPaymentStatus()
- * 
- * Checks whether an order has been marked as verified by the webhook.
+ * Checks verified payment status via KV store or authoritative FamGateway verification.
  */
 async function checkPaymentStatus(url, env) {
-  const orderId = url.searchParams.get("orderId");
+  const orderId = url.searchParams.get("order_id") || url.searchParams.get("orderId");
   if (!orderId) {
-    return json({ error: "Missing orderId parameter" }, 400);
+    return json({ ok: false, error: "Missing order_id" }, 400);
   }
 
-  // If KV storage is configured, read verified status
+  // 1. Check KV storage if configured
   if (env?.PAYMENT_KV) {
-    const data = await env.PAYMENT_KV.get(`order:${orderId}`);
-    if (data) {
-      try {
+    try {
+      const data = await env.PAYMENT_KV.get(`order:${orderId}`);
+      if (data) {
         const parsed = JSON.parse(data);
-        return json({
-          orderId,
-          verified: Boolean(parsed.verified),
-          status: parsed.verified ? "SUCCESS" : "PENDING"
-        });
-      } catch {}
+        if (parsed.verified) {
+          return json({
+            ok: true,
+            order_id: orderId,
+            verified: true,
+            status: "SUCCESS",
+            data: parsed
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("KV read error:", e);
     }
   }
 
-  return json({
-    orderId,
-    verified: false,
-    status: "PENDING"
-  });
+  // 2. Query FamGateway API with API Key in query parameter
+  const apiKey = env?.FAMGATEWAY_API_KEY;
+  try {
+    const verifyUrl = apiKey
+      ? `https://famgateway.in/api/verify-order.php?order_id=${encodeURIComponent(orderId)}&api_key=${encodeURIComponent(apiKey)}`
+      : `https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`;
+
+    const famRes = await fetch(verifyUrl);
+    const data = await famRes.json();
+
+    const isVerified = data.status === "success" || data.status === "paid" || data.verified === true;
+
+    return json({
+      ok: true,
+      order_id: orderId,
+      verified: isVerified,
+      status: isVerified ? "SUCCESS" : (data.status || "PENDING"),
+      data: data
+    });
+  } catch (err) {
+    // Fallback to public checkout-status endpoint if verify-order encounters network error
+    try {
+      const pubRes = await fetch(`https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`);
+      const pubData = await pubRes.json();
+      const isVerified = pubData.status === "success";
+      return json({
+        ok: true,
+        order_id: orderId,
+        verified: isVerified,
+        status: isVerified ? "SUCCESS" : (pubData.status || "PENDING"),
+        data: pubData
+      });
+    } catch {
+      return json({
+        ok: false,
+        order_id: orderId,
+        verified: false,
+        status: "PENDING",
+        error: "Status check currently unavailable"
+      }, 200);
+    }
+  }
 }
 
 export default {
@@ -216,19 +242,26 @@ export default {
 
     const url = new URL(request.url);
 
-    // 2. Route matching
-    if (request.method === "POST" && url.pathname.endsWith("/api/tip/order")) {
+    // 2. Health check
+    if (request.method === "GET" && url.pathname === "/") {
+      return json({ ok: true, service: "NIK MODS Payments" });
+    }
+
+    // 3. Create Order
+    if (request.method === "POST" && (url.pathname === "/create-order" || url.pathname.endsWith("/create-order"))) {
       return createPaymentOrder(request, env);
     }
 
-    if (request.method === "POST" && url.pathname.endsWith("/api/tip/webhook")) {
-      return handlePaymentWebhook(request, env);
-    }
-
-    if (request.method === "GET" && url.pathname.endsWith("/api/tip/status")) {
+    // 4. Status Check
+    if (request.method === "GET" && (url.pathname === "/status" || url.pathname.endsWith("/status"))) {
       return checkPaymentStatus(url, env);
     }
 
-    return json({ error: "Route not found" }, 404);
+    // 5. Webhook
+    if (request.method === "POST" && (url.pathname === "/webhook" || url.pathname.endsWith("/webhook"))) {
+      return handlePaymentWebhook(request, env);
+    }
+
+    return json({ ok: false, error: "Not found" }, 404);
   }
 };

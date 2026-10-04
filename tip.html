@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#020202">
+    <meta name="description" content="Support NIK MODS — Tip me a coffee to keep high-speed mods, tools, and updates coming.">
+    <title>Support NIK MODS | Tip Me a Coffee ☕</title>
+    
+    <link rel="icon" href="assets/nik-logo.svg">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Space Grotesk for futuristic UI, JetBrains Mono for Code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind Config for Custom Colors & Fonts -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            accent: '#ff003c',
+                            dark: '#050505',
+                            light: '#f8f9fa',
+                            glass: 'rgba(255, 255, 255, 0.08)',
+                            glassDark: 'rgba(0, 0, 0, 0.4)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="style.css?v=13">
+
+    <style>
+        /* Standalone overrides for tip page responsiveness & safe areas */
+        .safe-pb {
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        }
+        .safe-pt {
+            padding-top: max(1rem, env(safe-area-inset-top));
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .live-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes success-pop {
+            0% { transform: scale(0.6); opacity: 0; }
+            60% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-anim {
+            animation: success-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="antialiased font-sans bg-[#020202] text-white selection:bg-brand-accent selection:text-white min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Ambient Floating Particles -->
+    <div class="particles-container" id="particles" aria-hidden="true"></div>
+    
+    <!-- Dynamic Red/Dark Background Glow Orbs -->
+    <div class="fixed top-[-10%] left-[-15%] w-[65vw] h-[65vw] bg-brand-accent/10 rounded-full blur-[140px] pointer-events-none mix-blend-screen z-0" aria-hidden="true"></div>
+    <div class="fixed bottom-[-15%] right-[-15%] w-[55vw] h-[55vw] bg-brand-accent/5 rounded-full blur-[130px] pointer-events-none mix-blend-screen z-0" aria-hidden="true"></div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 glass-ultra mx-4 mt-4 rounded-2xl px-5 py-3.5 flex items-center justify-between border border-white/10">
+        <a href="index.html" class="flex items-center gap-2.5 text-white/70 hover:text-white transition-colors group" aria-label="Return to NIK MODS Catalog">
+            <div class="w-9 h-9 rounded-xl glass-card flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all">
+                <i class="fa-solid fa-arrow-left text-sm group-hover:-translate-x-0.5 transition-transform"></i>
+            </div>
+            <span class="text-xs font-mono tracking-widest text-white/60 group-hover:text-white transition-colors hidden sm:inline">CATALOG</span>
+        </a>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold tracking-[0.25em] text-white font-mono">NIK MODS</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_#ff003c]"></span>
+            <span class="text-[10px] font-mono text-white/40 tracking-wider">TIP</span>
+        </div>
+
+        <a href="https://t.me/nikxtech" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card border border-white/10 text-[11px] font-mono text-white/70 hover:text-white hover:border-brand-accent/40 transition-all" aria-label="Join NIK MODS on Telegram">
+            <i class="fa-brands fa-telegram text-brand-accent text-xs"></i>
+            <span class="hidden sm:inline">COMMUNITY</span>
+        </a>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 px-4 py-8 flex flex-col items-center justify-center relative z-10 max-w-lg mx-auto w-full safe-pb">
+        
+        <!-- Creator Support Hero -->
+        <section class="text-center mb-8 w-full" aria-labelledby="heroTitle">
+            <!-- Animated Glowing Coffee Cup -->
+            <div class="relative w-24 h-24 mx-auto mb-5 flex justify-center items-center">
+                <!-- Steam Trails -->
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none" aria-hidden="true">
+                    <i class="fa-solid fa-wind text-white/20 text-xs steam-1 -rotate-90"></i>
+                    <i class="fa-solid fa-wind text-white/35 text-base steam-2 -rotate-90"></i>
+                    <i class="fa-solid fa-wind text-white/20 text-xs steam-3 -rotate-90"></i>
+                </div>
+                <!-- Cup Container -->
+                <div class="w-20 h-20 rounded-[2rem] glass-ultra flex items-center justify-center bg-brand-accent/10 border border-brand-accent/30 shadow-[0_0_35px_rgba(255,0,60,0.25)] animate-[float-cup_3s_ease-in-out_infinite] chasing-border">
+                    <i class="fa-solid fa-mug-hot text-3xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]"></i>
+                </div>
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border border-brand-accent/30 text-[10px] font-mono tracking-widest text-brand-accent uppercase mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-accent animate-ping"></span>
+                NIK MODS SUPPORTERS
+            </div>
+
+            <h1 id="heroTitle" class="text-3xl sm:text-4xl font-light text-white tracking-tight mb-2">
+                Support the <span class="font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-brand-accent">creator ☕</span>
+            </h1>
+
+            <p class="text-white/50 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
+                If NIK MODS has helped you, you can support the project with a small tip.
+            </p>
+        </section>
+
+        <!-- Tip Box Card -->
+        <div class="w-full glass-ultra rounded-[2rem] p-6 sm:p-7 border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-accent/10 rounded-full blur-[50px] pointer-events-none"></div>
+
+            <!-- Amount Selection Header -->
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-[11px] font-mono font-bold tracking-widest text-white/60 uppercase">CHOOSE AMOUNT</span>
+                <span class="text-[11px] font-mono text-white/40">100% SECURE UPI</span>
+            </div>
+
+            <!-- Preset Amount Buttons: ₹10, ₹25, ₹50, ₹100, ₹250, ₹500 -->
+            <div class="grid grid-cols-3 gap-2.5 mb-5" role="radiogroup" aria-label="Select Tip Amount">
+                <button type="button" class="tip-amount-btn glass-card py-3.5 rounded-2xl text-base font-bold text-white/80 hover:text-white transition-all active:scale-95" onclick="selectTip(10, this)" role="radio" aria-checked="false" aria-label="Tip ₹10">₹10</button>
+                <button type="button" class="tip-amount-btn glass-card py-3.5 rounded-2xl text-base font-bold text-white/80 hover:text-white transition-all active:scale-95" onclick="selectTip(25, this)" role="radio" aria-checked="false" aria-label="Tip ₹25">₹25</button>
+                <button type="button" class="tip-amount-btn active glass-card py-3.5 rounded-2xl text-base font-bold transition-all chasing-border active:scale-95" onclick="selectTip(50, this)" role="radio" aria-checked="true" aria-label="Tip ₹50">₹50</button>
+                <button type="button" class="tip-amount-btn glass-card py-3.5 rounded-2xl text-base font-bold text-white/80 hover:text-white transition-all active:scale-95" onclick="selectTip(100, this)" role="radio" aria-checked="false" aria-label="Tip ₹100">₹100</button>
+                <button type="button" class="tip-amount-btn glass-card py-3.5 rounded-2xl text-base font-bold text-white/80 hover:text-white transition-all active:scale-95" onclick="selectTip(250, this)" role="radio" aria-checked="false" aria-label="Tip ₹250">₹250</button>
+                <button type="button" class="tip-amount-btn glass-card py-3.5 rounded-2xl text-base font-bold text-white/80 hover:text-white transition-all active:scale-95" onclick="selectTip(500, this)" role="radio" aria-checked="false" aria-label="Tip ₹500">₹500</button>
+            </div>
+
+            <!-- Custom Amount Input -->
+            <div class="mb-5">
+                <label for="customAmountInput" class="block text-[10px] font-mono tracking-wider text-white/50 mb-2 uppercase">OR ENTER CUSTOM AMOUNT (₹1 – ₹10,000)</label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40 group-focus-within:text-brand-accent transition-colors font-mono font-bold text-base">
+                        ₹
+                    </div>
+                    <input type="number" id="customAmountInput" placeholder="Custom amount" min="1" max="10000" step="1" inputmode="numeric" oninput="handleCustomInput()" aria-label="Custom Tip Amount"
+                        class="w-full glass-card bg-white/5 text-white text-base rounded-2xl pl-10 pr-4 py-3.5 focus:outline-none focus:border-brand-accent/60 focus:bg-white/10 transition-all font-mono placeholder-white/20 group-focus-within:shadow-[0_0_25px_rgba(255,0,60,0.2)] border border-white/10">
+                </div>
+                <p id="amountError" class="text-xs text-brand-accent font-mono mt-1.5 hidden flex items-center gap-1">
+                    <i class="fa-solid fa-circle-exclamation text-[10px]"></i>
+                    <span id="amountErrorText">Amount must be between ₹1 and ₹10,000</span>
+                </p>
+            </div>
+
+            <!-- Selected Summary Card -->
+            <div class="glass-card rounded-2xl p-4 mb-6 border border-white/10 flex items-center justify-between">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-mono tracking-widest text-white/50 uppercase">TOTAL TIP</span>
+                    <span class="text-[11px] text-white/40">Zero platform cuts &bull; Direct support</span>
+                </div>
+                <div class="text-right">
+                    <span id="selectedAmountDisplay" class="text-2xl font-bold font-mono text-brand-accent tracking-tight">₹50</span>
+                </div>
+            </div>
+
+            <!-- Primary CTA Button -->
+            <button type="button" id="payCtaBtn" onclick="initiateTipPayment()" class="w-full bg-brand-accent hover:bg-[#e00035] text-white font-bold tracking-widest py-4 rounded-2xl text-xs sm:text-sm transition-all hover:shadow-[0_0_35px_rgba(255,0,60,0.5)] active:scale-[0.98] chasing-border relative overflow-hidden flex items-center justify-center gap-2 group">
+                <span id="ctaBtnContent" class="relative z-10 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-mug-hot text-sm group-hover:rotate-12 transition-transform"></i>
+                    <span id="ctaBtnText">Tip ₹50</span>
+                </span>
+                <span id="ctaLoadingSpinner" class="hidden relative z-10 items-center justify-center gap-2.5">
+                    <div class="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                    <span class="text-xs font-mono tracking-wider">CREATING ORDER...</span>
+                </span>
+            </button>
+
+            <!-- Trust Badge & Fallback Info -->
+            <div class="mt-4 pt-4 border-t border-white/5 flex flex-col items-center justify-center gap-2 text-center">
+                <div class="flex items-center gap-2 text-[11px] font-mono text-white/40">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                    <span>Verified FamGateway &bull; End-to-end encrypted</span>
+                </div>
+                <p class="text-[10px] text-white/30 font-mono">
+                    Prefer UPI / dynamic checkout for verified payment.
+                </p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-6 border-t border-white/5 relative z-10 text-center">
+        <p class="text-xs text-white/30 font-mono">
+            &copy; <span id="year">2026</span> NIK MODS &bull; Built with passion & precision
+        </p>
+    </footer>
+
+    <!-- ================================================================= -->
+    <!-- PAYMENT MODAL / SHEET                                             -->
+    <!-- ================================================================= -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" aria-hidden="true" role="dialog" aria-labelledby="modalHeading">
+        <div id="paymentModalCard" class="glass-ultra rounded-[2.5rem] w-full max-w-sm p-6 text-center transform scale-95 transition-all duration-300 relative overflow-hidden border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
+            
+            <!-- Close Modal Button -->
+            <button type="button" onclick="closeModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full glass-card flex items-center justify-center text-white/50 hover:text-white transition-all z-20 hover:border-white/30" aria-label="Close payment modal">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <!-- 1. ACTIVE ORDER STATE -->
+            <div id="modalOrderReadyState" class="flex flex-col items-center">
+                
+                <!-- Status Pill -->
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 mb-3">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+                    <span id="orderStatusBadge">WAITING FOR PAYMENT...</span>
+                </div>
+
+                <h2 id="modalHeading" class="text-xl font-bold text-white tracking-wide mb-1">
+                    Complete Tip of <span id="modalAmountDisplay" class="text-brand-accent font-mono">₹50</span>
+                </h2>
+
+                <div class="flex items-center gap-1.5 text-xs text-white/40 font-mono mb-4">
+                    <span>Order:</span>
+                    <span id="modalOrderId" class="text-white/70 select-all font-semibold">fg_...</span>
+                    <button type="button" onclick="copyOrderId()" class="text-white/40 hover:text-white text-[11px] ml-1 transition-colors" title="Copy Order ID" aria-label="Copy Order ID">
+                        <i id="copyOrderIcon" class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+
+                <!-- Dynamic QR View -->
+                <div id="qrSection" class="w-full mb-4 flex flex-col items-center">
+                    <div class="w-48 h-48 rounded-2xl bg-white p-2.5 shadow-[0_0_30px_rgba(255,255,255,0.15)] flex items-center justify-center relative overflow-hidden border border-white/20">
+                        <img id="dynamicQrImage" src="" alt="UPI Payment QR Code" class="w-full h-full object-contain" />
+                        <!-- QR Skeleton while loading image -->
+                        <div id="qrLoadingSkeleton" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-slate-800">
+                            <div class="w-8 h-8 rounded-full border-2 border-slate-300 border-t-brand-accent animate-spin mb-2"></div>
+                            <span class="text-[10px] font-mono text-slate-500">Loading dynamic QR...</span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono text-white/40 mt-2">Scan with GPay, PhonePe, Paytm, or BHIM</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="w-full flex flex-col gap-2.5">
+                    <!-- UPI Intent Button (Primary on Android/Mobile) -->
+                    <button type="button" id="payWithUpiIntentBtn" onclick="triggerUpiIntent()" class="w-full bg-brand-accent hover:bg-[#e00035] text-white py-3.5 rounded-xl text-xs font-bold tracking-wider transition-all flex items-center justify-center gap-2 chasing-border active:scale-95">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>PAY WITH UPI APP</span>
+                    </button>
+
+                    <!-- Toggle QR Button -->
+                    <button type="button" id="toggleQrBtn" onclick="toggleQrVisibility()" class="w-full glass-card border border-white/10 text-white/80 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
+                        <i class="fa-solid fa-qrcode text-brand-accent"></i>
+                        <span id="toggleQrText">HIDE QR CODE</span>
+                    </button>
+
+                    <!-- Open Secure Checkout (Fallback) -->
+                    <a id="openCheckoutLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full glass-card border border-white/10 text-white/60 hover:text-white py-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 hover:border-white/30">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        <span>OPEN SECURE CHECKOUT</span>
+                    </a>
+                </div>
+
+                <!-- Live Polling Notice -->
+                <div class="flex items-center gap-2 text-[10px] font-mono text-white/40 mt-4">
+                    <div class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
+                    <span id="pollStatusNotice">Checking payment status automatically...</span>
+                </div>
+
+            </div>
+
+            <!-- 2. VERIFIED SUCCESS STATE -->
+            <div id="modalSuccessState" class="hidden flex-col items-center py-4 success-anim">
+                <div class="w-20 h-20 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(16,185,129,0.35)] animate-[float-cup_2.5s_ease-in-out_infinite]">
+                    <i class="fa-solid fa-check text-4xl text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.8)]"></i>
+                </div>
+
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 uppercase tracking-widest mb-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>PAYMENT VERIFIED</span>
+                </div>
+
+                <h2 class="text-3xl font-light text-white tracking-tight mb-1">
+                    Thank you <span class="text-brand-accent font-bold">❤️</span>
+                </h2>
+
+                <p class="text-xs text-white/60 mb-4 leading-relaxed max-w-xs">
+                    Your support has been received. You keep NIK MODS running!
+                </p>
+
+                <div class="w-full glass-card rounded-2xl p-4 mb-6 border border-white/10 flex items-center justify-between text-left">
+                    <div>
+                        <span class="text-[10px] font-mono text-white/40 uppercase block">VERIFIED AMOUNT</span>
+                        <span id="successAmountDisplay" class="text-xl font-bold font-mono text-emerald-400">₹50</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono text-white/40 uppercase block">ORDER ID</span>
+                        <span id="successOrderIdDisplay" class="text-xs font-mono text-white/80">fg_...</span>
+                    </div>
+                </div>
+
+                <a href="index.html" class="w-full bg-white text-black font-bold tracking-widest py-4 rounded-2xl text-xs transition-all hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-[1.02] flex items-center justify-center gap-2 chasing-border">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>BACK TO NIK MODS</span>
+                </a>
+            </div>
+
+            <!-- 3. FAILURE / EXPIRY STATE -->
+            <div id="modalErrorState" class="hidden flex-col items-center py-4">
+                <div class="w-16 h-16 rounded-2xl glass-card border border-brand-accent/40 bg-brand-accent/10 flex items-center justify-center mb-4 text-brand-accent shadow-[0_0_30px_rgba(255,0,60,0.25)]">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                </div>
+
+                <span class="text-[10px] font-mono text-brand-accent tracking-widest uppercase mb-1">TRANSACTION STATUS</span>
+                <h2 class="text-xl font-bold text-white tracking-wide mb-2">Payment not completed</h2>
+
+                <p id="modalErrorMessage" class="text-xs text-white/60 mb-6 leading-relaxed max-w-xs">
+                    The payment could not be confirmed or the order expired.
+                </p>
+
+                <button type="button" onclick="resetPaymentState()" class="w-full bg-brand-accent hover:bg-[#e00035] text-white py-3.5 rounded-xl text-xs font-bold tracking-wider mb-2 transition-all">
+                    TRY AGAIN
+                </button>
+                <button type="button" onclick="closeModal()" class="w-full glass-card text-white/70 hover:text-white py-2.5 rounded-xl text-xs font-medium">
+                    CANCEL
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- LOGIC SCRIPT                                                      -->
+    <!-- ================================================================= -->
+    <script>
+        (() => {
+            // Configuration & Endpoints
+            const PAYMENT_CONFIG = {
+                WORKER_URL: "https://nik-mods-payments.godrp3236.workers.dev",
+                CREATE_ORDER_PATH: "/create-order",
+                STATUS_PATH: "/status",
+                POLL_INTERVAL_MS: 2500,
+                MAX_POLL_DURATION_MS: 300000 // 5 minutes matching FamGateway order expiry
+            };
+
+            // State
+            let currentAmount = 50;
+            let activeOrder = null;
+            let pollTimer = null;
+            let pollStartTime = 0;
+            let isCreatingOrder = false;
+
+            // DOM Elements
+            const presetBtns = document.querySelectorAll(".tip-amount-btn");
+            const customInput = document.getElementById("customAmountInput");
+            const amountError = document.getElementById("amountError");
+            const amountErrorText = document.getElementById("amountErrorText");
+            const selectedAmountDisplay = document.getElementById("selectedAmountDisplay");
+            const ctaBtn = document.getElementById("payCtaBtn");
+            const ctaBtnText = document.getElementById("ctaBtnText");
+            const ctaBtnContent = document.getElementById("ctaBtnContent");
+            const ctaLoadingSpinner = document.getElementById("ctaLoadingSpinner");
+
+            // Modal Elements
+            const paymentModal = document.getElementById("paymentModal");
+            const paymentModalCard = document.getElementById("paymentModalCard");
+            const modalOrderReadyState = document.getElementById("modalOrderReadyState");
+            const modalSuccessState = document.getElementById("modalSuccessState");
+            const modalErrorState = document.getElementById("modalErrorState");
+            const modalAmountDisplay = document.getElementById("modalAmountDisplay");
+            const modalOrderId = document.getElementById("modalOrderId");
+            const dynamicQrImage = document.getElementById("dynamicQrImage");
+            const qrLoadingSkeleton = document.getElementById("qrLoadingSkeleton");
+            const qrSection = document.getElementById("qrSection");
+            const toggleQrBtn = document.getElementById("toggleQrBtn");
+            const toggleQrText = document.getElementById("toggleQrText");
+            const payWithUpiIntentBtn = document.getElementById("payWithUpiIntentBtn");
+            const openCheckoutLink = document.getElementById("openCheckoutLink");
+            const pollStatusNotice = document.getElementById("pollStatusNotice");
+            const copyOrderIcon = document.getElementById("copyOrderIcon");
+            const successAmountDisplay = document.getElementById("successAmountDisplay");
+            const successOrderIdDisplay = document.getElementById("successOrderIdDisplay");
+            const modalErrorMessage = document.getElementById("modalErrorMessage");
+
+            // Ambient Particles Generator
+            const particlesContainer = document.getElementById("particles");
+            if (particlesContainer) {
+                for (let i = 0; i < 24; i++) {
+                    const p = document.createElement("div");
+                    p.className = "particle";
+                    const size = Math.random() * 3 + 1.5;
+                    p.style.width = size + "px";
+                    p.style.height = size + "px";
+                    p.style.left = (Math.random() * 100) + "vw";
+                    p.style.animationDuration = (Math.random() * 12 + 10) + "s";
+                    p.style.animationDelay = (Math.random() * 8) + "s";
+                    particlesContainer.appendChild(p);
+                }
+            }
+
+            // Year
+            const yearEl = document.getElementById("year");
+            if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+            // Preset Selection
+            window.selectTip = function(amount, clickedElement) {
+                const num = Number(amount);
+                if (isNaN(num) || num < 1) return;
+
+                currentAmount = num;
+                if (customInput) customInput.value = "";
+                hideAmountError();
+
+                presetBtns.forEach(btn => {
+                    const isTarget = clickedElement ? btn === clickedElement : btn.textContent.trim() === `₹${num}`;
+                    btn.classList.toggle("active", isTarget);
+                    btn.classList.toggle("chasing-border", isTarget);
+                    btn.classList.toggle("text-white", isTarget);
+                    btn.classList.toggle("text-white/80", !isTarget);
+                    btn.setAttribute("aria-checked", isTarget ? "true" : "false");
+                });
+
+                updateDisplays();
+            };
+
+            // Custom Amount Input Handler
+            window.handleCustomInput = function() {
+                if (!customInput) return;
+                const rawVal = customInput.value.trim();
+
+                if (!rawVal) {
+                    window.selectTip(50);
+                    return;
+                }
+
+                // Deselect all presets
+                presetBtns.forEach(btn => {
+                    btn.classList.remove("active", "chasing-border", "text-white");
+                    btn.classList.add("text-white/80");
+                    btn.setAttribute("aria-checked", "false");
+                });
+
+                const parsed = Math.floor(Number(rawVal));
+
+                if (isNaN(parsed) || parsed < 1) {
+                    showAmountError("Minimum tip amount is ₹1");
+                    currentAmount = 0;
+                    updateDisplays(false);
+                } else if (parsed > 10000) {
+                    showAmountError("Maximum tip amount is ₹10,000");
+                    currentAmount = 0;
+                    updateDisplays(false);
+                } else {
+                    hideAmountError();
+                    currentAmount = parsed;
+                    updateDisplays(true);
+                }
+            };
+
+            function showAmountError(msg) {
+                if (amountError && amountErrorText) {
+                    amountErrorText.textContent = msg;
+                    amountError.classList.remove("hidden");
+                }
+                if (ctaBtn) {
+                    ctaBtn.disabled = true;
+                    ctaBtn.classList.add("opacity-50", "cursor-not-allowed");
+                }
+            }
+
+            function hideAmountError() {
+                if (amountError) amountError.classList.add("hidden");
+                if (ctaBtn) {
+                    ctaBtn.disabled = false;
+                    ctaBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                }
+            }
+
+            function updateDisplays(valid = true) {
+                if (!valid || currentAmount < 1) {
+                    if (selectedAmountDisplay) selectedAmountDisplay.textContent = "—";
+                    if (ctaBtnText) ctaBtnText.textContent = "Enter Valid Amount";
+                    return;
+                }
+
+                const formatted = `₹${currentAmount.toLocaleString("en-IN")}`;
+                if (selectedAmountDisplay) selectedAmountDisplay.textContent = formatted;
+                if (ctaBtnText) ctaBtnText.textContent = `Tip ${formatted}`;
+                if (modalAmountDisplay) modalAmountDisplay.textContent = formatted;
+            }
+
+            // Initiate Tip Payment
+            window.initiateTipPayment = async function() {
+                if (isCreatingOrder) return;
+                if (!currentAmount || currentAmount < 1 || currentAmount > 10000) {
+                    if (customInput) customInput.focus();
+                    return;
+                }
+
+                isCreatingOrder = true;
+                setCtaLoading(true);
+
+                try {
+                    const endpoint = `${PAYMENT_CONFIG.WORKER_URL}${PAYMENT_CONFIG.CREATE_ORDER_PATH}`;
+                    const res = await fetch(endpoint, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ amount: currentAmount })
+                    });
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => null);
+                        throw new Error(errData?.error || errData?.message || `Payment service returned HTTP ${res.status}`);
+                    }
+
+                    const jsonResp = await res.json();
+                    
+                    // Safely extract order data
+                    const orderData = jsonResp.data || jsonResp;
+                    const orderId = orderData.order_id || orderData.orderId;
+
+                    if (!orderId) {
+                        throw new Error("Invalid order response from gateway.");
+                    }
+
+                    activeOrder = {
+                        order_id: orderId,
+                        checkout_url: orderData.checkout_url || "",
+                        qr_url: orderData.qr_url || "",
+                        upi_intent: orderData.upi_intent || "",
+                        upi_id: orderData.upi_id || "",
+                        amount: orderData.amount || currentAmount
+                    };
+
+                    // Save order_id to sessionStorage
+                    try {
+                        sessionStorage.setItem("nik_tip_active_order_id", orderId);
+                    } catch {}
+
+                    // Open Payment Modal
+                    renderPaymentModal(activeOrder);
+
+                    // Start Verification Polling
+                    startStatusPolling(orderId);
+
+                } catch (err) {
+                    console.error("Order creation error:", err);
+                    alert(`Could not create payment order: ${err.message || "Network error"}. Please try again.`);
+                } finally {
+                    isCreatingOrder = false;
+                    setCtaLoading(false);
+                }
+            };
+
+            function setCtaLoading(loading) {
+                if (!ctaBtn) return;
+                ctaBtn.disabled = loading;
+                if (loading) {
+                    ctaBtnContent.classList.add("hidden");
+                    ctaLoadingSpinner.classList.remove("hidden");
+                    ctaLoadingSpinner.classList.add("flex");
+                } else {
+                    ctaBtnContent.classList.remove("hidden");
+                    ctaLoadingSpinner.classList.add("hidden");
+                    ctaLoadingSpinner.classList.remove("flex");
+                }
+            }
+
+            // Render Payment Modal
+            function renderPaymentModal(order) {
+                modalOrderReadyState.classList.remove("hidden");
+                modalOrderReadyState.classList.add("flex");
+                modalSuccessState.classList.add("hidden");
+                modalSuccessState.classList.remove("flex");
+                modalErrorState.classList.add("hidden");
+                modalErrorState.classList.remove("flex");
+
+                modalAmountDisplay.textContent = `₹${Number(order.amount).toLocaleString("en-IN")}`;
+                modalOrderId.textContent = order.order_id;
+
+                // QR Code
+                if (order.qr_url && dynamicQrImage) {
+                    qrSection.classList.remove("hidden");
+                    qrLoadingSkeleton.classList.remove("hidden");
+                    dynamicQrImage.onload = () => {
+                        qrLoadingSkeleton.classList.add("hidden");
+                    };
+                    dynamicQrImage.onerror = () => {
+                        qrLoadingSkeleton.classList.add("hidden");
+                    };
+                    dynamicQrImage.src = order.qr_url;
+                } else {
+                    if (qrSection) qrSection.classList.add("hidden");
+                }
+
+                // UPI Intent Button
+                if (order.upi_intent && payWithUpiIntentBtn) {
+                    payWithUpiIntentBtn.classList.remove("hidden");
+                } else {
+                    if (payWithUpiIntentBtn) payWithUpiIntentBtn.classList.add("hidden");
+                }
+
+                // Hosted Checkout Link
+                if (order.checkout_url && openCheckoutLink) {
+                    openCheckoutLink.href = order.checkout_url;
+                    openCheckoutLink.classList.remove("hidden");
+                } else {
+                    if (openCheckoutLink) openCheckoutLink.classList.add("hidden");
+                }
+
+                // Open modal with smooth transition
+                paymentModal.classList.remove("hidden");
+                paymentModal.setAttribute("aria-hidden", "false");
+                document.body.style.overflow = "hidden";
+
+                requestAnimationFrame(() => {
+                    paymentModal.classList.remove("opacity-0");
+                    paymentModalCard.classList.remove("scale-95");
+                });
+
+                // Auto-trigger UPI app on Android / mobile devices if upi_intent available
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile && order.upi_intent) {
+                    setTimeout(() => {
+                        triggerUpiIntent();
+                    }, 400);
+                }
+            }
+
+            // UPI Intent Trigger
+            window.triggerUpiIntent = function() {
+                if (!activeOrder?.upi_intent) return;
+                try {
+                    window.location.href = activeOrder.upi_intent;
+                } catch (e) {
+                    console.error("UPI launch error:", e);
+                }
+            };
+
+            // Toggle QR Visibility
+            let isQrHidden = false;
+            window.toggleQrVisibility = function() {
+                if (!qrSection) return;
+                isQrHidden = !isQrHidden;
+                if (isQrHidden) {
+                    qrSection.classList.add("hidden");
+                    if (toggleQrText) toggleQrText.textContent = "SHOW QR CODE";
+                } else {
+                    qrSection.classList.remove("hidden");
+                    if (toggleQrText) toggleQrText.textContent = "HIDE QR CODE";
+                }
+            };
+
+            // Copy Order ID
+            window.copyOrderId = function() {
+                if (!activeOrder?.order_id) return;
+                navigator.clipboard.writeText(activeOrder.order_id).then(() => {
+                    if (copyOrderIcon) copyOrderIcon.className = "fa-solid fa-check text-emerald-400";
+                    setTimeout(() => {
+                        if (copyOrderIcon) copyOrderIcon.className = "fa-regular fa-copy";
+                    }, 2000);
+                }).catch(() => {});
+            };
+
+            // Status Verification Polling
+            function startStatusPolling(orderId) {
+                stopStatusPolling();
+
+                pollStartTime = Date.now();
+
+                const checkStatus = async () => {
+                    // Check timeout
+                    if (Date.now() - pollStartTime > PAYMENT_CONFIG.MAX_POLL_DURATION_MS) {
+                        stopStatusPolling();
+                        showPaymentError("The payment session timed out. If you paid, please verify on your banking app or try again.");
+                        return;
+                    }
+
+                    try {
+                        const statusUrl = `${PAYMENT_CONFIG.WORKER_URL}${PAYMENT_CONFIG.STATUS_PATH}?order_id=${encodeURIComponent(orderId)}`;
+                        const res = await fetch(statusUrl, { cache: "no-store" });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            const isPaid = data.verified === true ||
+                                           data.status === "SUCCESS" ||
+                                           data.status === "success" ||
+                                           data.status === "paid" ||
+                                           data.status === "COMPLETED";
+
+                            if (isPaid) {
+                                stopStatusPolling();
+                                showPaymentSuccess(orderId, activeOrder?.amount || currentAmount);
+                                return;
+                            }
+
+                            if (data.status === "expired" || data.status === "failed") {
+                                stopStatusPolling();
+                                showPaymentError("Order has expired or was not completed.");
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Status check transient notice:", e);
+                    }
+                };
+
+                // Immediate initial check
+                checkStatus();
+
+                // Recurring poll every 2.5s
+                pollTimer = setInterval(checkStatus, PAYMENT_CONFIG.POLL_INTERVAL_MS);
+            }
+
+            function stopStatusPolling() {
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            }
+
+            // Show Verified Success State
+            function showPaymentSuccess(orderId, amount) {
+                modalOrderReadyState.classList.add("hidden");
+                modalOrderReadyState.classList.remove("flex");
+                modalErrorState.classList.add("hidden");
+                modalErrorState.classList.remove("flex");
+
+                modalSuccessState.classList.remove("hidden");
+                modalSuccessState.classList.add("flex");
+
+                if (successAmountDisplay) successAmountDisplay.textContent = `₹${Number(amount).toLocaleString("en-IN")}`;
+                if (successOrderIdDisplay) successOrderIdDisplay.textContent = orderId;
+
+                try {
+                    sessionStorage.removeItem("nik_tip_active_order_id");
+                } catch {}
+            }
+
+            // Show Payment Error State
+            function showPaymentError(message) {
+                modalOrderReadyState.classList.add("hidden");
+                modalOrderReadyState.classList.remove("flex");
+                modalSuccessState.classList.add("hidden");
+                modalSuccessState.classList.remove("flex");
+
+                modalErrorState.classList.remove("hidden");
+                modalErrorState.classList.add("flex");
+
+                if (modalErrorMessage) modalErrorMessage.textContent = message || "Payment not completed.";
+            }
+
+            // Reset Payment State
+            window.resetPaymentState = function() {
+                stopStatusPolling();
+                activeOrder = null;
+                closeModal();
+            };
+
+            // Close Modal
+            window.closeModal = function() {
+                stopStatusPolling();
+
+                paymentModal.classList.add("opacity-0");
+                paymentModalCard.classList.add("scale-95");
+                paymentModal.setAttribute("aria-hidden", "true");
+
+                setTimeout(() => {
+                    paymentModal.classList.add("hidden");
+                    document.body.style.overflow = "";
+                }, 300);
+            };
+
+            // Close on backdrop click
+            if (paymentModal) {
+                paymentModal.addEventListener("click", (e) => {
+                    if (e.target === paymentModal) {
+                        window.closeModal();
+                    }
+                });
+            }
+
+            // Initialize default ₹50 preset
+            window.selectTip(50);
+        })();
+    </script>
+</body>
+</html>
