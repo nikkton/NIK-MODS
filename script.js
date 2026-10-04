@@ -9,16 +9,21 @@
   // Lenis only owns the document scroll; horizontal filter/carousel gestures
   // and payment/modal scrolling remain native and are not intercepted.
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // BUTTER-SMOOTH MAIN PAGE SCROLL
+  // Touch screens use 100% native hardware-accelerated momentum scrolling (0ms lag).
+  // Lenis provides butter-smooth scrolling for desktop mouse wheels only.
+  // -------------------------------------------------------------------------
   let smoothScroller = null;
+  const isTouchDevice = window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
-  if (window.Lenis) {
+  if (window.Lenis && !isTouchDevice && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     smoothScroller = new Lenis({
       autoRaf: true,
       smoothWheel: true,
-      syncTouch: true,
-      duration: 0.72,
-      wheelMultiplier: 0.92,
-      touchMultiplier: 1,
+      syncTouch: false,
+      duration: 0.9,
+      wheelMultiplier: 0.95,
       anchors: true,
       infinite: false
     });
@@ -185,7 +190,7 @@
     }
 
     catalogList.innerHTML = visible.map((a) => {
-      const isAvailable = a.link && a.link !== "#";
+      const isAvailable = Boolean(a.link && a.link !== "#" && a.link.trim() !== "");
       const iconUrl = a.icon || CONFIG.DEFAULT_ICON;
       const formattedDate = date(a.date);
 
@@ -229,7 +234,10 @@
               aria-label="Get ${esc(a.name)}"
             >
               <span class="get-it-label">GET IT</span>
-              <span class="get-it-orb"><i class="fa-solid fa-arrow-right"></i></span>
+              <span class="get-it-orb">
+                <i class="fa-solid fa-arrow-right"></i>
+                <div class="get-it-spinner" aria-hidden="true"></div>
+              </span>
             </button>
           </div>` : ""}
 
@@ -256,23 +264,27 @@
   }
 
   // --- Signature GET IT toggle ------------------------------------------------
-  // Click -> locks into a loading state for 3s -> redirects to the ShrinkMe URL.
+  // Click -> immediately locks button -> transforms orb to rotating loader -> PREPARING -> exactly 3s -> redirect to ShrinkMe URL.
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".get-it-toggle");
-    if (!btn || btn.dataset.busy === "1") return;
+    if (!btn || btn.dataset.busy === "1" || btn.disabled) return;
 
     const url = btn.dataset.downloadUrl;
     if (!url || url === "#") return;
 
+    // STEP 1: Immediately lock button so it cannot be double-clicked
     btn.dataset.busy = "1";
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
     btn.classList.add("is-loading");
 
+    // STEP 2 & 3: Transform circular orb into rotating loader & change text subtly to PREPARING
     const label = btn.querySelector(".get-it-label");
-    const orb = btn.querySelector(".get-it-orb");
     if (label) label.textContent = "PREPARING";
-    if (orb) orb.innerHTML = '<i class="fa-solid fa-circle-notch"></i>';
 
+    // STEP 4 & 5: Orb continuously rotates with smooth animation; wait exactly 3 seconds
     setTimeout(() => {
+      // STEP 6: Redirect the browser to that item's exact ShrinkMe link
       window.location.href = url;
     }, 3000);
   });
@@ -416,30 +428,50 @@
     typeWriter();
   }
 
-  // --- Filter Pills Auto-Scroll & Click ---
+  // --- Filter Pills Auto-Scroll & Click (Optimized: Zero layout thrashing) ---
+  let maxFilterScroll = 0;
+  function updateFilterDimensions() {
+    if (filterContainer) {
+      maxFilterScroll = Math.max(0, filterContainer.scrollWidth - filterContainer.clientWidth);
+    }
+  }
+
   function autoScrollFilters() {
-    if (isAutoScrolling && filterContainer) {
-      filterContainer.scrollLeft += scrollSpeed;
-      if (filterContainer.scrollLeft >= (filterContainer.scrollWidth - filterContainer.clientWidth - 1)) {
-        scrollSpeed = -0.4;
-      } else if (filterContainer.scrollLeft <= 0) {
-        scrollSpeed = 0.4;
+    if (isAutoScrolling && filterContainer && !document.body.classList.contains("is-scrolling")) {
+      if (maxFilterScroll > 0) {
+        filterContainer.scrollLeft += scrollSpeed;
+        if (filterContainer.scrollLeft >= maxFilterScroll - 1) {
+          scrollSpeed = -0.4;
+        } else if (filterContainer.scrollLeft <= 0) {
+          scrollSpeed = 0.4;
+        }
       }
     }
     requestAnimationFrame(autoScrollFilters);
   }
 
   if (filterContainer) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      isAutoScrolling = false;
+    }
+
+    updateFilterDimensions();
+    window.addEventListener("resize", updateFilterDimensions, { passive: true });
+
     autoScrollFilters();
 
     const pauseScroll = () => { isAutoScrolling = false; clearTimeout(scrollTimeout); };
     const resumeScroll = () => {
       clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => { isAutoScrolling = true; }, 1500);
+      scrollTimeout = setTimeout(() => {
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          isAutoScrolling = true;
+        }
+      }, 1500);
     };
 
     filterContainer.addEventListener("touchstart", pauseScroll, { passive: true });
-    filterContainer.addEventListener("touchend", resumeScroll);
+    filterContainer.addEventListener("touchend", resumeScroll, { passive: true });
     filterContainer.addEventListener("mouseenter", pauseScroll);
     filterContainer.addEventListener("mouseleave", resumeScroll);
     filterContainer.addEventListener("wheel", pauseScroll, { passive: true });
@@ -794,16 +826,18 @@
   window.TipPaymentService = TipPaymentService;
 
 
-  // --- Ambient Particles ---
-  if (particlesContainer) {
-    for (let i = 0; i < 28; i++) {
+  // --- Ambient Particles (Lightweight & Performance-Optimized) ---
+  if (particlesContainer && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const isMobile = window.innerWidth < 768;
+    const count = isMobile ? 8 : 16;
+    for (let i = 0; i < count; i++) {
       const p = document.createElement("div");
       p.className = "particle";
-      const sizePx = Math.random() * 3 + 1.5;
+      const sizePx = Math.random() * 2.5 + 1;
       p.style.width = sizePx + "px";
       p.style.height = sizePx + "px";
       p.style.left = Math.random() * 100 + "vw";
-      p.style.animationDuration = (Math.random() * 10 + 10) + "s";
+      p.style.animationDuration = (Math.random() * 10 + 12) + "s";
       p.style.animationDelay = (Math.random() * 10) + "s";
       particlesContainer.appendChild(p);
     }
@@ -814,10 +848,8 @@
     yearEl.textContent = new Date().getFullYear();
   }
 
-  // --- Initial GSAP Reveal Animations ---
+  // --- Initial GSAP Reveal Animations & Native IntersectionObserver ---
   if (window.gsap) {
-    if (window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
-
     gsap.to(".gsap-reveal", {
       y: 0,
       opacity: 1,
@@ -831,20 +863,35 @@
       duration: 0.9,
       ease: "power2.inOut"
     });
+  }
 
-    if (window.ScrollTrigger) {
-      ScrollTrigger.create({
-        trigger: "#communityCarousel",
-        start: "top 85%",
-        once: true,
-        onEnter: () => goToSlide(0)
+  // Native IntersectionObserver for Carousel (0 scroll listener overhead)
+  const carouselEl = $("#communityCarousel");
+  if (carouselEl && "IntersectionObserver" in window) {
+    const carouselObs = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          goToSlide(0);
+          obs.disconnect();
+        }
       });
-    } else {
-      goToSlide(0);
-    }
+    }, { rootMargin: "0px 0px -15% 0px" });
+    carouselObs.observe(carouselEl);
   } else {
     goToSlide(0);
   }
+
+  // --- Smooth Scroll Performance Mode Handler (Passive & Debounced) ---
+  let isScrollingTimer = null;
+  window.addEventListener("scroll", () => {
+    if (!document.body.classList.contains("is-scrolling")) {
+      document.body.classList.add("is-scrolling");
+    }
+    clearTimeout(isScrollingTimer);
+    isScrollingTimer = setTimeout(() => {
+      document.body.classList.remove("is-scrolling");
+    }, 120);
+  }, { passive: true });
 
 
 
