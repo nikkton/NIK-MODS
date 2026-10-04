@@ -197,31 +197,23 @@
             <span class="text-xs text-white/60 leading-relaxed">${esc(a.description)}</span>
           </div>
 
-          <!-- Action Button -->
+          <!-- Action Button: only render when a real download link exists -->
+          ${isAvailable ? `
           <div class="mt-5 relative z-10">
-            ${isAvailable
-              ? `<a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" class="w-full block bg-white/10 hover:bg-brand-accent text-white py-3 rounded-xl text-xs font-bold text-center tracking-widest uppercase transition-all duration-300 chasing-border shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,0,60,0.4)]">
-                  <i class="fa-solid fa-arrow-down mr-1.5 text-xs"></i> Continue to download
-                </a>`
-              : `<div class="w-full bg-white/5 border border-brand-accent/30 text-white/70 py-3 rounded-xl text-xs font-bold text-center transition-all hover:bg-white/10 cursor-not-allowed">
-                  Not available
-                </div>`
-            }
-          </div>
+            <a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" class="w-full block bg-white/10 hover:bg-brand-accent text-white py-3 rounded-xl text-xs font-bold text-center tracking-widest uppercase transition-all duration-300 chasing-border shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,0,60,0.4)]">
+              <i class="fa-solid fa-arrow-down mr-1.5 text-xs"></i> Continue to download
+            </a>
+          </div>` : ""}
 
           <!-- Footer Action & Meta -->
           <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center relative z-10">
             <div class="text-[10px] text-white/30 font-mono flex items-center gap-1.5">
               <i class="fa-regular fa-clock"></i> ${esc(formattedDate)}
             </div>
-            ${isAvailable
-              ? `<div class="flex items-center gap-2 text-[10px] font-mono tracking-widest text-emerald-400">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span> READY
-                </div>`
-              : `<div class="flex items-center gap-2 text-[10px] font-mono tracking-widest text-white/40">
-                  <span class="w-1.5 h-1.5 rounded-full bg-white/40"></span> UNAVAILABLE
-                </div>`
-            }
+            ${isAvailable ? `
+            <div class="flex items-center gap-2 text-[10px] font-mono tracking-widest text-emerald-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span> READY
+            </div>` : ""}
           </div>
         </div>
       `;
