@@ -69,6 +69,30 @@
         .success-anim {
             animation: success-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        #paymentModalCard {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+        }
+        #paymentModalCard::-webkit-scrollbar {
+            width: 4px;
+        }
+        #paymentModalCard::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #paymentModalCard::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 9999px;
+        }
+        .toast-hidden {
+            opacity: 0;
+            transform: translate(-50%, -24px);
+            pointer-events: none;
+        }
+        .toast-visible {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body class="antialiased font-sans bg-[#020202] text-white selection:bg-brand-accent selection:text-white min-h-screen flex flex-col relative overflow-x-hidden">
@@ -214,14 +238,27 @@
         </p>
     </footer>
 
+    <!-- Premium Toast for Save QR Notification -->
+    <div id="saveQrToast" class="toast-hidden fixed left-1/2 z-[100] transition-all duration-300 w-max max-w-[92vw]" style="top: calc(env(safe-area-inset-top) + 16px);" aria-live="polite">
+        <div class="glass-ultra border border-emerald-500/30 bg-[#0a0a0a]/90 backdrop-blur-xl rounded-2xl px-4 py-3 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                <i class="fa-solid fa-circle-check text-sm"></i>
+            </div>
+            <div class="text-left font-sans">
+                <div class="text-xs font-mono font-bold tracking-wider text-white">QR HAS BEEN SAVED</div>
+                <div class="text-[11px] text-white/60">Please scan the QR and confirm payment.</div>
+            </div>
+        </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- PAYMENT MODAL / SHEET                                             -->
     <!-- ================================================================= -->
-    <div id="paymentModal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" aria-hidden="true" role="dialog" aria-labelledby="modalHeading">
-        <div id="paymentModalCard" class="glass-ultra rounded-[2.5rem] w-full max-w-sm p-6 text-center transform scale-95 transition-all duration-300 relative overflow-hidden border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
+    <div id="paymentModal" class="fixed inset-0 min-h-screen h-[100dvh] w-full bg-black/90 backdrop-blur-xl z-50 hidden flex items-center justify-center p-3 sm:p-4 opacity-0 transition-opacity duration-300 overflow-hidden box-border" style="padding-top: max(0.75rem, env(safe-area-inset-top)); padding-bottom: max(0.75rem, env(safe-area-inset-bottom));" aria-hidden="true" role="dialog" aria-labelledby="modalHeading">
+        <div id="paymentModalCard" class="glass-ultra rounded-[2.2rem] sm:rounded-[2.5rem] w-full max-w-sm max-h-[min(94dvh,680px)] overflow-y-auto p-5 sm:p-6 text-center transform scale-95 transition-all duration-300 relative border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.8)] box-border">
             
             <!-- Close Modal Button -->
-            <button type="button" onclick="closeModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full glass-card flex items-center justify-center text-white/50 hover:text-white transition-all z-20 hover:border-white/30" aria-label="Close payment modal">
+            <button type="button" onclick="closeModal()" class="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-9 h-9 rounded-full glass-card flex items-center justify-center text-white/50 hover:text-white transition-all z-20 hover:border-white/30" aria-label="Close payment modal">
                 <i class="fa-solid fa-xmark text-sm"></i>
             </button>
 
@@ -255,7 +292,7 @@
                 <!-- QR-FIRST PAYMENT -->
                 <div class="w-full flex flex-col items-center gap-3 mb-2">
                     <div id="qrSection" class="w-full flex flex-col items-center">
-                        <div class="qr-frame w-52 h-52 sm:w-56 sm:h-56 rounded-[1.6rem] bg-white p-3 shadow-[0_0_45px_rgba(255,0,60,0.18)] flex items-center justify-center relative overflow-hidden border border-white/20">
+                        <div class="qr-frame w-48 h-48 xs:w-52 xs:h-52 sm:w-56 sm:h-56 rounded-[1.6rem] bg-white p-3 shadow-[0_0_45px_rgba(255,0,60,0.18)] flex items-center justify-center relative overflow-hidden border border-white/20">
                             <img id="dynamicQrImage" src="" alt="UPI Payment QR Code" class="w-full h-full object-contain relative z-10 rounded-xl" />
                             <div id="qrLoadingSkeleton" class="absolute inset-0 bg-white flex flex-col items-center justify-center text-slate-800 z-20">
                                 <div class="w-9 h-9 rounded-full border-2 border-slate-300 border-t-brand-accent animate-spin mb-2"></div>
@@ -358,10 +395,66 @@
             let currentAmount = 50;
             let activeOrder = null;
             let pollTimer = null;
-            let pollStartTime = 0;
+            let isPollingActive = false;
+            let isStatusFetchInFlight = false;
             let expiryAtMs = 0;
             let expiryTimer = null;
+            let isOrderExpired = false;
             let isCreatingOrder = false;
+            let successSoundPlayed = false;
+            let toastTimer = null;
+
+            // Audio Asset (Local Pixabay Yipee sound effect)
+            let successAudio = null;
+            try {
+                successAudio = new Audio("assets/audio/yipee.mp3");
+                successAudio.preload = "auto";
+                successAudio.volume = 0.25;
+            } catch (e) {
+                console.warn("Audio preload notice:", e);
+            }
+
+            function playSuccessAudio() {
+                if (successSoundPlayed) return;
+                successSoundPlayed = true;
+
+                try {
+                    if (!successAudio) {
+                        successAudio = new Audio("assets/audio/yipee.mp3");
+                        successAudio.volume = 0.25;
+                    }
+                    successAudio.currentTime = 0;
+                    const p = successAudio.play();
+                    if (p && typeof p.catch === "function") {
+                        p.catch((err) => {
+                            // Autoplay policies may reject without user gesture; ignore silently
+                            console.log("Audio autoplay notice:", err?.message || err);
+                        });
+                    }
+                } catch {
+                    // Fail silently without blocking payment state
+                }
+            }
+
+            // Save QR Toast Notification
+            function showSaveQrToast() {
+                const toast = document.getElementById("saveQrToast");
+                if (!toast) return;
+
+                if (toastTimer) {
+                    clearTimeout(toastTimer);
+                    toastTimer = null;
+                }
+
+                toast.classList.remove("toast-hidden");
+                toast.classList.add("toast-visible");
+
+                toastTimer = setTimeout(() => {
+                    toast.classList.remove("toast-visible");
+                    toast.classList.add("toast-hidden");
+                    toastTimer = null;
+                }, 3000);
+            }
 
             // DOM Elements
             const presetBtns = document.querySelectorAll(".tip-amount-btn");
@@ -547,6 +640,10 @@
                         expires_at_ist: orderData.expires_at_ist || orderData.expires_at || ""
                     };
 
+                    // Reset order state guards
+                    successSoundPlayed = false;
+                    isOrderExpired = false;
+
                     // Save order_id to sessionStorage
                     try {
                         sessionStorage.setItem("nik_tip_active_order_id", orderId);
@@ -651,6 +748,9 @@
 
                     setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
                     if (saveQrText) saveQrText.textContent = "DOWNLOADED ✓";
+
+                    // Premium toast notification
+                    showSaveQrToast();
                 } catch (err) {
                     console.error("QR save error:", err);
                     if (saveQrText) saveQrText.textContent = "SAVE FAILED";
@@ -697,30 +797,58 @@
                 return Date.now() + PAYMENT_CONFIG.MAX_POLL_DURATION_MS;
             }
 
+            function updateExpiryDisplay(remainingMs) {
+                const totalSeconds = Math.ceil(remainingMs / 1000);
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+
+                if (expiryCountdown) {
+                    expiryCountdown.textContent =
+                        String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+                    expiryCountdown.classList.toggle("text-brand-accent", remainingMs <= 30000);
+                }
+            }
+
+            function tickCountdown() {
+                if (!expiryAtMs || isOrderExpired) return;
+                const remaining = Math.max(0, expiryAtMs - Date.now());
+                updateExpiryDisplay(remaining);
+
+                if (remaining <= 0) {
+                    handleOrderExpired();
+                }
+            }
+
+            function handleOrderExpired() {
+                if (isOrderExpired) return;
+                isOrderExpired = true;
+                stopExpiryCountdown();
+                stopStatusPolling();
+                if (expiryCountdown) {
+                    expiryCountdown.textContent = "00:00";
+                }
+                if (activeOrder) {
+                    showPaymentError("Payment session expired. Please create a new tip order.");
+                }
+            }
+
             function startExpiryCountdown(expiryValue) {
-                if (expiryTimer) clearInterval(expiryTimer);
+                stopExpiryCountdown();
+                isOrderExpired = false;
                 expiryAtMs = parseFamGatewayExpiry(expiryValue);
 
-                const tick = () => {
-                    const remaining = Math.max(0, expiryAtMs - Date.now());
-                    const totalSeconds = Math.ceil(remaining / 1000);
-                    const mins = Math.floor(totalSeconds / 60);
-                    const secs = totalSeconds % 60;
+                // Initial immediate calculation based on absolute server timestamp
+                tickCountdown();
 
-                    if (expiryCountdown) {
-                        expiryCountdown.textContent = String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
-                        expiryCountdown.classList.toggle("text-brand-accent", remaining <= 30000);
-                    }
+                // Exactly ONE central countdown interval
+                expiryTimer = setInterval(tickCountdown, 1000);
+            }
 
-                    if (remaining <= 0) {
-                        clearInterval(expiryTimer);
-                        expiryTimer = null;
-                        if (activeOrder) showPaymentError("Payment session expired. Please create a new tip order.");
-                    }
-                };
-
-                tick();
-                expiryTimer = setInterval(tick, 1000);
+            function stopExpiryCountdown() {
+                if (expiryTimer) {
+                    clearInterval(expiryTimer);
+                    expiryTimer = null;
+                }
             }
 
             // Copy Order ID
@@ -738,18 +866,20 @@
             // Primary source is our Cloudflare Worker, which performs the authoritative
             // FamGateway server-side check without exposing the API key. Direct public
             // checkout-status is retained as a browser fallback only.
-            function startStatusPolling(orderId) {
-                stopStatusPolling();
-                pollStartTime = Date.now();
-                const localDeadline = expiryAtMs || (pollStartTime + PAYMENT_CONFIG.MAX_POLL_DURATION_MS);
+            async function checkStatusOnce() {
+                if (!activeOrder?.order_id || isOrderExpired || isStatusFetchInFlight) {
+                    return;
+                }
 
-                const checkStatus = async () => {
-                    if (Date.now() >= localDeadline) {
-                        stopStatusPolling();
-                        showPaymentError("Payment session expired. Please create a new tip order.");
-                        return;
-                    }
+                if (expiryAtMs && Date.now() >= expiryAtMs) {
+                    handleOrderExpired();
+                    return;
+                }
 
+                isStatusFetchInFlight = true;
+                const orderId = activeOrder.order_id;
+
+                try {
                     let statusPayload = null;
 
                     // 1) Authoritative Worker check.
@@ -780,6 +910,8 @@
                         return;
                     }
 
+                    if (!activeOrder || activeOrder.order_id !== orderId || isOrderExpired) return;
+
                     const nested = statusPayload.data || statusPayload.result || {};
                     const status = String(
                         statusPayload.status ??
@@ -796,33 +928,41 @@
 
                     if (isPaid) {
                         stopStatusPolling();
+                        stopExpiryCountdown();
                         showPaymentSuccess(orderId, activeOrder?.amount || currentAmount);
+                        playSuccessAudio();
                         return;
                     }
 
                     if (["expired", "failed", "cancelled"].includes(status)) {
-                        stopStatusPolling();
-                        showPaymentError("Payment session expired or was not completed.");
+                        handleOrderExpired();
                         return;
                     }
 
                     if (pollStatusNotice) {
                         pollStatusNotice.textContent = "Checking payment status automatically...";
                     }
-                };
+                } finally {
+                    isStatusFetchInFlight = false;
+                }
+            }
 
-                checkStatus();
-                pollTimer = setInterval(checkStatus, PAYMENT_CONFIG.POLL_INTERVAL_MS);
+            function startStatusPolling(orderId) {
+                stopStatusPolling();
+                isPollingActive = true;
+
+                // Immediate first check
+                checkStatusOnce();
+
+                // Exactly ONE central recurring polling interval
+                pollTimer = setInterval(checkStatusOnce, PAYMENT_CONFIG.POLL_INTERVAL_MS);
             }
 
             function stopStatusPolling() {
+                isPollingActive = false;
                 if (pollTimer) {
                     clearInterval(pollTimer);
                     pollTimer = null;
-                }
-                if (expiryTimer) {
-                    clearInterval(expiryTimer);
-                    expiryTimer = null;
                 }
             }
 
@@ -860,13 +1000,16 @@
             // Reset Payment State
             window.resetPaymentState = function() {
                 stopStatusPolling();
+                stopExpiryCountdown();
                 activeOrder = null;
+                isOrderExpired = false;
                 closeModal();
             };
 
             // Close Modal
             window.closeModal = function() {
                 stopStatusPolling();
+                stopExpiryCountdown();
 
                 paymentModal.classList.add("opacity-0");
                 paymentModalCard.classList.add("scale-95");
@@ -886,6 +1029,28 @@
                     }
                 });
             }
+
+            // Global lifecycle handlers (Recalculate timer immediately without creating duplicate intervals)
+            function handleAppReturn() {
+                if (!activeOrder || isOrderExpired) return;
+
+                // 1. Recalculate timer immediately based on absolute Date.now()
+                tickCountdown();
+
+                // 2. Perform one fresh payment status check if polling is active
+                if (isPollingActive && !isOrderExpired && !isStatusFetchInFlight) {
+                    checkStatusOnce();
+                }
+            }
+
+            // Register global event listeners ONCE
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") {
+                    handleAppReturn();
+                }
+            });
+            window.addEventListener("pageshow", handleAppReturn);
+            window.addEventListener("focus", handleAppReturn);
 
             // Initialize default ₹50 preset
             window.selectTip(50);
