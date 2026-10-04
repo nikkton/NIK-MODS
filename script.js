@@ -148,6 +148,84 @@
     };
   }
 
+  // --- Signature Liquid GET IT Palette & Deterministic Hash ---
+  const LIQUID_PALETTE = [
+    {
+      name: "neon-red",
+      color: "#ff003c",
+      bright: "#ff3366",
+      dark: "rgba(160, 0, 36, 0.85)",
+      glow: "rgba(255, 0, 60, 0.65)",
+      soft: "rgba(255, 0, 60, 0.18)"
+    },
+    {
+      name: "crimson",
+      color: "#ff2a55",
+      bright: "#ff5e7e",
+      dark: "rgba(168, 16, 48, 0.85)",
+      glow: "rgba(255, 42, 85, 0.65)",
+      soft: "rgba(255, 42, 85, 0.18)"
+    },
+    {
+      name: "magenta",
+      color: "#e024c3",
+      bright: "#f355dc",
+      dark: "rgba(138, 14, 120, 0.85)",
+      glow: "rgba(224, 36, 195, 0.65)",
+      soft: "rgba(224, 36, 195, 0.18)"
+    },
+    {
+      name: "violet",
+      color: "#9d4edd",
+      bright: "#be7bf7",
+      dark: "rgba(92, 28, 142, 0.85)",
+      glow: "rgba(157, 78, 221, 0.65)",
+      soft: "rgba(157, 78, 221, 0.18)"
+    },
+    {
+      name: "electric-blue",
+      color: "#0077ff",
+      bright: "#4da0ff",
+      dark: "rgba(0, 72, 160, 0.85)",
+      glow: "rgba(0, 119, 255, 0.65)",
+      soft: "rgba(0, 119, 255, 0.18)"
+    },
+    {
+      name: "cyan",
+      color: "#00f5d4",
+      bright: "#5cfce6",
+      dark: "rgba(0, 140, 122, 0.85)",
+      glow: "rgba(0, 245, 212, 0.65)",
+      soft: "rgba(0, 245, 212, 0.18)"
+    },
+    {
+      name: "emerald",
+      color: "#10b981",
+      bright: "#34d399",
+      dark: "rgba(6, 105, 72, 0.85)",
+      glow: "rgba(16, 185, 129, 0.65)",
+      soft: "rgba(16, 185, 129, 0.18)"
+    },
+    {
+      name: "amber",
+      color: "#f59e0b",
+      bright: "#fbbf24",
+      dark: "rgba(150, 92, 4, 0.85)",
+      glow: "rgba(245, 158, 11, 0.65)",
+      soft: "rgba(245, 158, 11, 0.18)"
+    }
+  ];
+
+  function getLiquidTheme(name) {
+    let hash = 0;
+    const str = String(name || "").trim().toLowerCase();
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    }
+    const idx = Math.abs(hash) % LIQUID_PALETTE.length;
+    return LIQUID_PALETTE[idx];
+  }
+
   // --- Dynamic Catalog Rendering ---
   function render() {
     if (!catalogList || !itemCount) return;
@@ -193,9 +271,11 @@
       const isAvailable = Boolean(a.link && a.link !== "#" && a.link.trim() !== "");
       const iconUrl = a.icon || CONFIG.DEFAULT_ICON;
       const formattedDate = date(a.date);
+      const liquidTheme = getLiquidTheme(a.name);
+      const liquidStyles = `--liq-color: ${liquidTheme.color}; --liq-bright: ${liquidTheme.bright}; --liq-dark: ${liquidTheme.dark}; --liq-glow: ${liquidTheme.glow}; --liq-soft: ${liquidTheme.soft};`;
 
       return `
-        <div class="glass-card rounded-3xl p-6 relative overflow-hidden group" data-category="${esc(a.category)}">
+        <div class="glass-card rounded-3xl p-6 relative overflow-hidden group" data-category="${esc(a.category)}" style="${liquidStyles}">
           <!-- Aesthetic grid overlay inside card -->
           <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-50 z-0 pointer-events-none"></div>
 
@@ -224,19 +304,51 @@
             <span class="text-xs text-white/60 leading-relaxed">${esc(a.description)}</span>
           </div>
 
-          <!-- NIK MODS GET IT toggle -->
+          <!-- NIK MODS Signature Liquid GET IT Zone -->
           ${isAvailable ? `
-          <div class="mt-5 relative z-10">
+          <div class="card-liquid-zone relative mt-5 flex items-center justify-end">
+            <!-- Liquid Stream Conduit originating from left card boundary -->
+            <div class="card-liquid-stream" aria-hidden="true">
+              <div class="liquid-source-well"></div>
+              <div class="liquid-stream-track">
+                <div class="liquid-stream-flow"></div>
+                <div class="liquid-stream-droplets">
+                  <span class="stream-drop drop-1"></span>
+                  <span class="stream-drop drop-2"></span>
+                  <span class="stream-drop drop-3"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Signature Obsidian Glass GET IT Toggle -->
             <button
               type="button"
               class="get-it-toggle"
               data-download-url="${esc(a.link)}"
               aria-label="Get ${esc(a.name)}"
             >
-              <span class="get-it-label">GET IT</span>
+              <!-- Internal Liquid Fill Chamber -->
+              <div class="get-it-chamber" aria-hidden="true">
+                <div class="get-it-liquid-fill">
+                  <div class="liquid-wave-crest wave-a"></div>
+                  <div class="liquid-wave-crest wave-b"></div>
+                  <div class="liquid-specular"></div>
+                </div>
+              </div>
+
+              <!-- Button Label (GET IT -> PREPARING) -->
+              <span class="get-it-label">
+                <span class="label-text">GET IT</span>
+              </span>
+
+              <!-- Action Orb with Custom Fluid Ripple Indicator (NO generic spinner) -->
               <span class="get-it-orb">
                 <i class="fa-solid fa-arrow-right"></i>
-                <div class="get-it-spinner" aria-hidden="true"></div>
+                <div class="get-it-liquid-ripple" aria-hidden="true">
+                  <div class="ripple-ring ring-1"></div>
+                  <div class="ripple-ring ring-2"></div>
+                  <div class="ripple-dot"></div>
+                </div>
               </span>
             </button>
           </div>` : ""}
@@ -263,8 +375,13 @@
     }
   }
 
-  // --- Signature GET IT toggle ------------------------------------------------
-  // Click -> immediately locks button -> transforms orb to rotating loader -> PREPARING -> exactly 3s -> redirect to ShrinkMe URL.
+  // --- Signature Liquid GET IT Button Interaction ----------------------------
+  // Timeline:
+  // 0.0s: Immediate lock, liquid originates from left wall of card
+  // 0.0-0.7s: Liquid streams across card toward GET IT button
+  // 0.7-2.5s: Liquid fills button reservoir (0% -> 100%), text switches to PREPARING, orb fluid ripple activates
+  // 2.5-3.0s: Liquid Full state, activation sheen, stream finishes draining
+  // 3.0s: Exact redirect to ShrinkMe link
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".get-it-toggle");
     if (!btn || btn.dataset.busy === "1" || btn.disabled) return;
@@ -272,19 +389,38 @@
     const url = btn.dataset.downloadUrl;
     if (!url || url === "#") return;
 
-    // STEP 1: Immediately lock button so it cannot be double-clicked
+    // STEP 1: Lock immediately to prevent double-tap
     btn.dataset.busy = "1";
     btn.disabled = true;
     btn.setAttribute("aria-busy", "true");
-    btn.classList.add("is-loading");
 
-    // STEP 2 & 3: Transform circular orb into rotating loader & change text subtly to PREPARING
-    const label = btn.querySelector(".get-it-label");
-    if (label) label.textContent = "PREPARING";
+    const card = btn.closest(".glass-card");
+    const label = btn.querySelector(".label-text");
 
-    // STEP 4 & 5: Orb continuously rotates with smooth animation; wait exactly 3 seconds
+    // Phase 1 (0.0s): Liquid stream begins flowing from left edge of card
+    if (card) card.classList.add("card-liquid-active");
+    btn.classList.add("is-flowing");
+
+    // Phase 2 (0.7s): Liquid reaches button, begins filling chamber
     setTimeout(() => {
-      // STEP 6: Redirect the browser to that item's exact ShrinkMe link
+      btn.classList.remove("is-flowing");
+      btn.classList.add("is-filling");
+      if (label) {
+        label.textContent = "PREPARING";
+      }
+    }, 700);
+
+    // Phase 3 (2.5s): Liquid completely fills button (100% full activation state)
+    setTimeout(() => {
+      btn.classList.remove("is-filling");
+      btn.classList.add("is-full");
+      if (card) {
+        card.classList.add("stream-drained");
+      }
+    }, 2500);
+
+    // Phase 4 (3.0s): Exactly 3 seconds total duration -> Redirect to ShrinkMe link
+    setTimeout(() => {
       window.location.href = url;
     }, 3000);
   });

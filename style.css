@@ -248,19 +248,238 @@ body.is-scrolling .chasing-border::after {
 
 
 /* =========================================================================
-   NIK MODS — SIGNATURE "GET IT" FUTURISTIC TOGGLE CONTROL
+   NIK MODS — SIGNATURE LIQUID "GET IT" INTERACTION
    ========================================================================= */
-.get-it-toggle {
+
+/* Liquid Flow Zone (container on card) */
+.card-liquid-zone {
     position: relative;
     width: 100%;
     min-height: 52px;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+}
+
+/* 1. Liquid Stream Conduit (originates from left card boundary) */
+.card-liquid-stream {
+    position: absolute;
+    left: -24px;
+    right: 212px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.card-liquid-active .card-liquid-stream {
+    opacity: 1;
+}
+
+.card-liquid-active.stream-drained .card-liquid-stream {
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Liquid Source Well (origin on left card inner wall) */
+.liquid-source-well {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scale(0.4);
+    width: 12px;
+    height: 28px;
+    border-radius: 0 16px 16px 0;
+    background: linear-gradient(90deg, var(--liq-color, #ff003c), var(--liq-bright, #ff3366));
+    box-shadow: 
+        0 0 16px var(--liq-glow, rgba(255, 0, 60, 0.65)),
+        inset 0 0 6px rgba(255, 255, 255, 0.6);
+    opacity: 0;
+}
+
+.card-liquid-active .liquid-source-well {
+    animation: liquidSourceWellSurge 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes liquidSourceWellSurge {
+    0% {
+        transform: translateY(-50%) scale(0.3);
+        opacity: 0;
+    }
+    40% {
+        transform: translateY(-50%) scale(1.2);
+        opacity: 1;
+        box-shadow: 0 0 24px var(--liq-glow, rgba(255, 0, 60, 0.8)), inset 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+    75% {
+        transform: translateY(-50%) scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-50%) scale(0.95);
+        opacity: 0.9;
+    }
+}
+
+/* Liquid Stream Track & Conduit */
+.liquid-stream-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+    margin-left: 6px;
+}
+
+.liquid-stream-flow {
+    position: absolute;
+    left: 0;
+    right: -4px;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg, 
+        var(--liq-bright, #ff3366) 0%, 
+        var(--liq-color, #ff003c) 65%, 
+        var(--liq-bright, #ff3366) 100%
+    );
+    box-shadow: 
+        0 0 14px var(--liq-glow, rgba(255, 0, 60, 0.6)),
+        0 0 26px var(--liq-soft, rgba(255, 0, 60, 0.2));
+    transform-origin: left center;
+    transform: scaleX(0);
+}
+
+.card-liquid-active .liquid-stream-flow {
+    animation: liquidStreamSurge 0.7s cubic-bezier(0.25, 0.9, 0.35, 1) forwards;
+}
+
+@keyframes liquidStreamSurge {
+    0% {
+        transform: scaleX(0);
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: scaleX(1);
+        opacity: 1;
+    }
+}
+
+/* Fluid Droplets riding the stream */
+.liquid-stream-droplets {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.stream-drop {
+    position: absolute;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 
+        0 0 8px var(--liq-bright, #ff3366),
+        0 0 14px var(--liq-glow, rgba(255, 0, 60, 0.6));
+    opacity: 0;
+    pointer-events: none;
+}
+
+.card-liquid-active .stream-drop.drop-1 {
+    width: 6px;
+    height: 6px;
+    top: 9px;
+    left: 4px;
+    animation: dropletRush1 0.68s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+.card-liquid-active .stream-drop.drop-2 {
+    width: 4.5px;
+    height: 4.5px;
+    top: 17px;
+    left: 12px;
+    animation: dropletRush2 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.04s forwards;
+}
+
+.card-liquid-active .stream-drop.drop-3 {
+    width: 5px;
+    height: 5px;
+    top: 13px;
+    left: 8px;
+    animation: dropletRush3 0.66s cubic-bezier(0.2, 0.8, 0.3, 1) 0.08s forwards;
+}
+
+@keyframes dropletRush1 {
+    0% {
+        transform: translateX(0) scale(0.5);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    85% {
+        transform: translateX(calc(100% + 22px)) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(calc(100% + 40px)) scale(0.4);
+        opacity: 0;
+    }
+}
+
+@keyframes dropletRush2 {
+    0% {
+        transform: translateX(0) scale(0.4);
+        opacity: 0;
+    }
+    25% {
+        opacity: 1;
+    }
+    85% {
+        transform: translateX(calc(100% + 20px)) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(calc(100% + 36px)) scale(0.3);
+        opacity: 0;
+    }
+}
+
+@keyframes dropletRush3 {
+    0% {
+        transform: translateX(0) scale(0.5);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    85% {
+        transform: translateX(calc(100% + 25px)) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(calc(100% + 42px)) scale(0.4);
+        opacity: 0;
+    }
+}
+
+/* 2. Signature Futuristic Obsidian Glass Toggle */
+.get-it-toggle {
+    position: relative;
+    width: 216px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 6px 8px 6px 22px;
+    gap: 12px;
+    padding: 6px 8px 6px 20px;
     border-radius: 9999px;
-    background: linear-gradient(180deg, rgba(20, 20, 24, 0.92) 0%, rgba(10, 10, 12, 0.98) 100%);
+    background: linear-gradient(180deg, rgba(22, 22, 28, 0.94) 0%, rgba(10, 10, 13, 0.98) 100%);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-top: 1px solid rgba(255, 255, 255, 0.22);
     box-shadow: 
@@ -278,8 +497,8 @@ body.is-scrolling .chasing-border::after {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .get-it-toggle:hover:not(:disabled):not(.is-loading) {
-        transform: translateY(-1px) scale(1.01);
+    .get-it-toggle:hover:not(:disabled):not(.is-flowing):not(.is-filling):not(.is-full) {
+        transform: translateY(-1px) scale(1.015);
         border-color: rgba(255, 0, 60, 0.45);
         box-shadow: 
             0 8px 24px rgba(0, 0, 0, 0.7),
@@ -288,11 +507,11 @@ body.is-scrolling .chasing-border::after {
     }
 }
 
-.get-it-toggle:active:not(:disabled):not(.is-loading) {
+.get-it-toggle:active:not(:disabled):not(.is-flowing):not(.is-filling):not(.is-full) {
     transform: scale(0.985);
 }
 
-/* Subtle glass specular sweep highlight */
+/* Subtle glass specular sweep highlight on idle hover */
 .get-it-toggle::before {
     content: "";
     position: absolute;
@@ -304,16 +523,157 @@ body.is-scrolling .chasing-border::after {
     transform: skewX(-25deg);
     pointer-events: none;
     transition: left 0.7s ease;
+    z-index: 1;
 }
 
-.get-it-toggle:hover:not(:disabled):not(.is-loading)::before {
+.get-it-toggle:hover:not(:disabled):not(.is-flowing):not(.is-filling):not(.is-full)::before {
     left: 200%;
 }
 
-/* Label content */
+/* 3. Internal Liquid Reservoir Chamber */
+.get-it-chamber {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.get-it-liquid-fill {
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg, 
+        var(--liq-dark, rgba(160, 0, 36, 0.85)) 0%, 
+        var(--liq-color, #ff003c) 65%, 
+        var(--liq-bright, #ff3366) 100%
+    );
+    box-shadow: 
+        inset 0 1px 2px rgba(255, 255, 255, 0.45),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.4),
+        0 0 22px var(--liq-glow, rgba(255, 0, 60, 0.65));
+    border-radius: inherit;
+    will-change: transform;
+}
+
+/* Liquid enters and fills the button from 0.7s to 2.5s (1.8s duration) */
+.get-it-toggle.is-filling .get-it-liquid-fill {
+    animation: liquidFillReservoir 1.8s cubic-bezier(0.22, 0.85, 0.32, 1) forwards;
+}
+
+.get-it-toggle.is-full .get-it-liquid-fill {
+    transform: translateX(0%);
+}
+
+@keyframes liquidFillReservoir {
+    0% {
+        transform: translateX(-100%);
+    }
+    15% {
+        transform: translateX(-82%);
+    }
+    50% {
+        transform: translateX(-45%);
+    }
+    80% {
+        transform: translateX(-12%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}
+
+/* Liquid Wave Crests on advancing surface */
+.liquid-wave-crest {
+    position: absolute;
+    top: -50%;
+    right: -10px;
+    width: 22px;
+    height: 200%;
+    border-radius: 42%;
+    pointer-events: none;
+}
+
+.liquid-wave-crest.wave-a {
+    background: var(--liq-bright, #ff3366);
+    opacity: 0.8;
+    filter: blur(1.5px);
+    animation: waveSloshA 1.1s ease-in-out infinite alternate;
+}
+
+.liquid-wave-crest.wave-b {
+    background: #ffffff;
+    opacity: 0.45;
+    filter: blur(1px);
+    animation: waveSloshB 0.85s ease-in-out infinite alternate;
+}
+
+@keyframes waveSloshA {
+    0% {
+        transform: translateY(-4px) scaleX(0.9);
+    }
+    50% {
+        transform: translateY(3px) scaleX(1.15);
+    }
+    100% {
+        transform: translateY(-4px) scaleX(0.9);
+    }
+}
+
+@keyframes waveSloshB {
+    0% {
+        transform: translateY(4px) scaleX(1.1);
+    }
+    50% {
+        transform: translateY(-3px) scaleX(0.85);
+    }
+    100% {
+        transform: translateY(4px) scaleX(1.1);
+    }
+}
+
+/* Liquid Specular Sheen Sweep upon full reservoir */
+.liquid-specular {
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-20deg);
+    pointer-events: none;
+}
+
+.get-it-toggle.is-full .liquid-specular {
+    animation: liquidSpecularSweep 0.5s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes liquidSpecularSweep {
+    0% {
+        left: -120%;
+        opacity: 0;
+    }
+    40% {
+        opacity: 1;
+    }
+    100% {
+        left: 200%;
+        opacity: 0;
+    }
+}
+
+/* 4. Button Label (GET IT -> PREPARING) */
 .get-it-label {
     position: relative;
-    z-index: 1;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.label-text {
     font-family: 'Space Grotesk', -apple-system, sans-serif;
     font-size: 0.8125rem; /* 13px */
     font-weight: 700;
@@ -321,13 +681,22 @@ body.is-scrolling .chasing-border::after {
     color: #ffffff;
     text-transform: uppercase;
     text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
-    transition: opacity 0.25s ease, letter-spacing 0.25s ease, color 0.25s ease;
+    transition: opacity 0.25s ease, letter-spacing 0.25s ease, text-shadow 0.3s ease;
 }
 
-/* Red Action Orb on the Right */
+.get-it-toggle.is-filling .label-text,
+.get-it-toggle.is-full .label-text {
+    letter-spacing: 0.18em;
+    color: #ffffff;
+    text-shadow: 
+        0 0 14px var(--liq-glow, rgba(255, 0, 60, 0.7)),
+        0 0 6px #ffffff;
+}
+
+/* 5. Action Orb & Custom Fluid Ripple Vortex (NO generic spinner) */
 .get-it-orb {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
@@ -341,19 +710,11 @@ body.is-scrolling .chasing-border::after {
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.35s ease,
+                box-shadow 0.35s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
-    .get-it-toggle:hover:not(:disabled):not(.is-loading) .get-it-orb {
-        transform: scale(1.06);
-        box-shadow: 
-            0 0 20px rgba(255, 0, 60, 0.9),
-            inset 0 1px 1px rgba(255, 255, 255, 0.5);
-    }
-}
-
-/* Arrow inside Orb */
 .get-it-orb i,
 .get-it-orb svg {
     font-size: 12px;
@@ -362,63 +723,195 @@ body.is-scrolling .chasing-border::after {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .get-it-toggle:hover:not(:disabled):not(.is-loading) .get-it-orb i {
+    .get-it-toggle:hover:not(:disabled):not(.is-flowing):not(.is-filling):not(.is-full) .get-it-orb {
+        transform: scale(1.06);
+        box-shadow: 
+            0 0 20px rgba(255, 0, 60, 0.9),
+            inset 0 1px 1px rgba(255, 255, 255, 0.5);
+    }
+    .get-it-toggle:hover:not(:disabled):not(.is-flowing):not(.is-filling):not(.is-full) .get-it-orb i {
         transform: translateX(1.5px);
     }
 }
 
-/* Spinner inside Orb (revealed on preparing / is-loading) */
-.get-it-spinner {
+/* Custom Liquid Ripple Indicator inside Orb */
+.get-it-liquid-ripple {
     position: absolute;
-    inset: 5px;
-    border: 2.2px solid rgba(255, 255, 255, 0.25);
-    border-top-color: #ffffff;
-    border-right-color: #ffffff;
-    border-radius: 50%;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.2s ease;
 }
 
-/* PREPARING / ACTIVE STATE */
-.get-it-toggle.is-loading {
+.ripple-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 
+        0 0 10px var(--liq-bright, #ff3366),
+        0 0 16px var(--liq-glow, rgba(255, 0, 60, 0.65));
+}
+
+.ripple-ring {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 1.8px solid var(--liq-bright, #ff3366);
+    opacity: 0;
+}
+
+/* Orb state when fluid is active */
+.get-it-toggle.is-flowing .get-it-orb,
+.get-it-toggle.is-filling .get-it-orb,
+.get-it-toggle.is-full .get-it-orb {
+    background: linear-gradient(135deg, var(--liq-bright, #ff3366) 0%, var(--liq-dark, #a00024) 100%);
+    box-shadow: 
+        0 0 18px var(--liq-glow, rgba(255, 0, 60, 0.7)),
+        inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.get-it-toggle.is-flowing .get-it-orb i,
+.get-it-toggle.is-filling .get-it-orb i,
+.get-it-toggle.is-full .get-it-orb i {
+    opacity: 0;
+    transform: scale(0.3) rotate(45deg);
+}
+
+.get-it-toggle.is-flowing .get-it-liquid-ripple,
+.get-it-toggle.is-filling .get-it-liquid-ripple,
+.get-it-toggle.is-full .get-it-liquid-ripple {
+    opacity: 1;
+}
+
+.get-it-toggle.is-flowing .ripple-dot,
+.get-it-toggle.is-filling .ripple-dot,
+.get-it-toggle.is-full .ripple-dot {
+    animation: dropletVortexCore 0.9s ease-in-out infinite alternate;
+}
+
+.get-it-toggle.is-flowing .ripple-ring.ring-1,
+.get-it-toggle.is-filling .ripple-ring.ring-1,
+.get-it-toggle.is-full .ripple-ring.ring-1 {
+    animation: liquidVortexPulse 1.4s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+}
+
+.get-it-toggle.is-flowing .ripple-ring.ring-2,
+.get-it-toggle.is-filling .ripple-ring.ring-2,
+.get-it-toggle.is-full .ripple-ring.ring-2 {
+    animation: liquidVortexPulse 1.4s cubic-bezier(0.2, 0.8, 0.4, 1) 0.7s infinite;
+}
+
+@keyframes dropletVortexCore {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1.15);
+        opacity: 1;
+        box-shadow: 0 0 14px #ffffff, 0 0 20px var(--liq-bright, #ff3366);
+    }
+}
+
+@keyframes liquidVortexPulse {
+    0% {
+        transform: scale(0.4);
+        opacity: 0.95;
+    }
+    70% {
+        opacity: 0.35;
+    }
+    100% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
+}
+
+/* 6. Active & Full Activation States */
+.get-it-toggle:disabled {
     cursor: wait;
-    pointer-events: none;
-    border-color: rgba(255, 0, 60, 0.55);
+}
+
+.get-it-toggle.is-flowing,
+.get-it-toggle.is-filling {
+    border-color: var(--liq-glow, rgba(255, 0, 60, 0.5));
     box-shadow: 
         0 4px 22px rgba(0, 0, 0, 0.7),
-        0 0 24px rgba(255, 0, 60, 0.32),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        0 0 24px var(--liq-soft, rgba(255, 0, 60, 0.3)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.get-it-toggle.is-loading .get-it-label {
-    letter-spacing: 0.18em;
-    color: #f1f5f9;
-    text-shadow: 0 0 14px rgba(255, 0, 60, 0.7);
-    animation: getItPulse 1.5s ease-in-out infinite alternate;
+.get-it-toggle.is-full {
+    border-color: var(--liq-bright, #ff3366);
+    box-shadow: 
+        0 4px 24px rgba(0, 0, 0, 0.75),
+        0 0 32px var(--liq-glow, rgba(255, 0, 60, 0.7)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    animation: buttonFullChargedPulse 0.5s ease-in-out infinite alternate;
 }
 
-@keyframes getItPulse {
-    0% { opacity: 0.82; }
-    100% { opacity: 1; }
+@keyframes buttonFullChargedPulse {
+    0% {
+        box-shadow: 
+            0 4px 24px rgba(0, 0, 0, 0.75),
+            0 0 24px var(--liq-glow, rgba(255, 0, 60, 0.55)),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    100% {
+        box-shadow: 
+            0 4px 26px rgba(0, 0, 0, 0.8),
+            0 0 36px var(--liq-glow, rgba(255, 0, 60, 0.85)),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    }
 }
 
-.get-it-toggle.is-loading .get-it-orb i,
-.get-it-toggle.is-loading .get-it-orb svg {
-    opacity: 0;
-    display: none;
+/* 7. Mobile Viewport Refinements (360px - 480px) */
+@media (max-width: 480px) {
+    .get-it-toggle {
+        width: 202px;
+        min-height: 50px;
+        padding: 5px 6px 5px 16px;
+        gap: 10px;
+    }
+
+    .label-text {
+        font-size: 0.75rem; /* 12px */
+        letter-spacing: 0.18em;
+    }
+
+    .card-liquid-stream {
+        right: 198px;
+    }
+
+    .get-it-orb {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+    }
 }
 
-.get-it-toggle.is-loading .get-it-spinner {
-    opacity: 1 !important;
-    animation: getItSpin 0.75s linear infinite;
+@media (max-width: 360px) {
+    .get-it-toggle {
+        width: 190px;
+        min-height: 48px;
+        padding: 4px 6px 4px 14px;
+    }
+
+    .label-text {
+        font-size: 0.6875rem; /* 11px */
+        letter-spacing: 0.15em;
+    }
+
+    .card-liquid-stream {
+        right: 186px;
+    }
 }
 
-@keyframes getItSpin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
+/* 8. Reduced Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after {
         animation-duration: 0.01ms !important;
@@ -432,11 +925,18 @@ body.is-scrolling .chasing-border::after {
     .particle {
         display: none !important;
     }
-    .get-it-toggle.is-loading .get-it-spinner {
+    .get-it-toggle.is-filling .get-it-liquid-fill,
+    .get-it-toggle.is-full .get-it-liquid-fill {
+        transform: translateX(0) !important;
         animation: none !important;
-        border-color: #ffffff;
     }
-    .get-it-toggle.is-loading .get-it-label {
+    .card-liquid-active .liquid-stream-flow {
+        transform: scaleX(1) !important;
         animation: none !important;
+    }
+    .liquid-wave-crest,
+    .stream-drop,
+    .ripple-ring {
+        display: none !important;
     }
 }
