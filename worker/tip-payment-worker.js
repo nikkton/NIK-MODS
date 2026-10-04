@@ -198,27 +198,47 @@ async function checkPaymentStatus(url, env) {
 
     const famRes = await fetch(verifyUrl);
     const data = await famRes.json();
+    const nested = data?.data || data?.result || {};
+    const normalizedStatus = String(
+      data?.status ?? nested?.status ?? data?.state ?? nested?.state ?? ""
+    ).toLowerCase();
 
-    const isVerified = data.status === "success" || data.status === "paid" || data.verified === true;
+    const isVerified =
+      data?.verified === true ||
+      nested?.verified === true ||
+      ["success", "paid", "completed"].includes(normalizedStatus);
+
+    const isExpired = ["expired", "failed", "cancelled"].includes(normalizedStatus);
 
     return json({
       ok: true,
       order_id: orderId,
       verified: isVerified,
-      status: isVerified ? "SUCCESS" : (data.status || "PENDING"),
-      data: data
+      status: isVerified ? "SUCCESS" : (isExpired ? "EXPIRED" : "PENDING"),
+      data
     });
   } catch (err) {
     // Fallback to public checkout-status endpoint if verify-order encounters network error
     try {
       const pubRes = await fetch(`https://famgateway.in/api/checkout-status.php?order_id=${encodeURIComponent(orderId)}`);
       const pubData = await pubRes.json();
-      const isVerified = pubData.status === "success";
+      const pubNested = pubData?.data || pubData?.result || {};
+      const pubStatus = String(
+        pubData?.status ?? pubNested?.status ?? pubData?.state ?? pubNested?.state ?? ""
+      ).toLowerCase();
+
+      const isVerified =
+        pubData?.verified === true ||
+        pubNested?.verified === true ||
+        ["success", "paid", "completed"].includes(pubStatus);
+
+      const isExpired = ["expired", "failed", "cancelled"].includes(pubStatus);
+
       return json({
         ok: true,
         order_id: orderId,
         verified: isVerified,
-        status: isVerified ? "SUCCESS" : (pubData.status || "PENDING"),
+        status: isVerified ? "SUCCESS" : (isExpired ? "EXPIRED" : "PENDING"),
         data: pubData
       });
     } catch {
