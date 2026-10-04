@@ -4,6 +4,28 @@
  */
 
 (() => {
+  // -------------------------------------------------------------------------
+  // BUTTER-SMOOTH MAIN PAGE SCROLL
+  // Lenis only owns the document scroll; horizontal filter/carousel gestures
+  // and payment/modal scrolling remain native and are not intercepted.
+  // -------------------------------------------------------------------------
+  let smoothScroller = null;
+
+  if (window.Lenis) {
+    smoothScroller = new Lenis({
+      autoRaf: true,
+      smoothWheel: true,
+      syncTouch: true,
+      duration: 0.72,
+      wheelMultiplier: 0.92,
+      touchMultiplier: 1,
+      anchors: true,
+      infinite: false
+    });
+
+    window.NIKSmoothScroll = smoothScroller;
+  }
+
   const CONFIG = {
     CATALOG_URL: "catalog.json",
     DEFAULT_ICON: "assets/nik-logo.svg",
